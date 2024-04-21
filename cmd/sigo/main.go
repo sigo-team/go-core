@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"os"
 	"os/signal"
-	slg "sigo/iternal/.logger"
 	"sigo/iternal/config"
 	"sigo/iternal/game"
 	"sigo/iternal/http-server/handlers"
@@ -41,6 +40,7 @@ func main() {
 	app := fiber.New()
 	app.Get("/", handlers.UpgradeHandler())
 	app.Get("/", ws.ConnectPlayerHandler(ctx, lb))
+	app.Get("/khil", handlers.UpgradeHandler())
 	app.Get("/khil", ws.ConnectKhil(ctx, lb))
 
 	go func() {
@@ -57,7 +57,7 @@ func main() {
 
 	cancel()
 	if err := app.Shutdown(); err != nil {
-		slg.Err(err)
+		log.Errorf("Error shutting down server: %v", err)
 	}
 	log.Info("app closed")
 }

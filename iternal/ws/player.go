@@ -9,15 +9,15 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"gopkg.in/loremipsum.v1"
 	"math/rand"
-	slg "sigo/iternal/.logger"
+	"sigo/iternal/api"
 	"sigo/iternal/game"
+	"sync"
 )
 
 type Player struct {
 	User
 	Name  string
 	Score int
-	// TODO: id
 }
 
 // todo: write and read to User
@@ -37,20 +37,37 @@ func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
 
 		lb.Register <- player
 
+		request := api.Request{
+			Type: "greeting",
+			Data: api.Data{
+				ThemeIndex:    0,
+				QuestionIndex: 0,
+				PlayerId:      player.ID,
+				ScoreChanges:  0,
+				ChooserID:     0,
+			},
+		}
+		marshalled, err := json.Marshal(request)
+		if err != nil {
+			log.Errorf("Error marshalling request: %v", err)
+		}
+
 		msg := &message{
 			User:    &player.User,
-			Content: []byte(fmt.Sprintf("A new user has joined the lobby: %s", player.Name)),
+			Content: []byte(marshalled),
 		}
 		lb.Broadcast <- msg
 
-		go player.write(lb)
-		go player.read(lb)
-		/*
-			go player.writeMessage(lb)
-			go player.readMessage(lb)*/
+		mu := &sync.Mutex{}
+
+		go player.write(lb, mu)
+		go player.read(lb, mu)
 
 		player.sendSiPackage(lb.SiPck)
-		player.Conn.WriteMessage(1, []byte(fmt.Sprintf("%s", lb.Players)))
+		player.Message <- &message{
+			User:    nil,
+			Content: []byte(fmt.Sprintf("%s", lb.Players)),
+		}
 
 		select {
 		case <-ctx.Done():
@@ -59,40 +76,6 @@ func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
 		}
 
 	})
-}
-
-func (player *Player) writeMessage(lb *Lobby) {
-	defer func() {
-		lb.Unregister <- player
-		player.Conn.Close()
-	}()
-
-	for {
-		select {
-		case msg := <-player.Message:
-			if err := player.Conn.WriteMessage(1, msg.Content); err != nil {
-				log.Errorf("Error writing message: %v", err)
-			}
-		}
-	}
-}
-
-func (player *Player) readMessage(lb *Lobby) {
-	defer player.Conn.Close()
-
-	for {
-		_, data, err := player.Conn.ReadMessage()
-		if err != nil {
-			return
-		}
-
-		msg := &message{
-			User:    &player.User,
-			Content: data,
-		}
-
-		lb.Broadcast <- msg
-	}
 }
 
 func (player *Player) sendSiPackage(p *game.Package) {
@@ -119,7 +102,12 @@ func (player *Player) sendSiPackage(p *game.Package) {
 		}
 	}
 
-	if err := player.Conn.WriteJSON(siPckHeaders); err != nil {
-		slg.Err(err)
+	bytes, err := json.Marshal(siPckHeaders)
+	if err != nil {
+		return
+	}
+	player.Message <- &message{
+		User:    nil,
+		Content: bytes,
 	}
 }

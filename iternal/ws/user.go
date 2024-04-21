@@ -3,6 +3,7 @@ package ws
 import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2/log"
+	"sync"
 )
 
 type message struct {
@@ -16,9 +17,10 @@ type User struct {
 	Message chan *message
 }
 
-func (User *User) read(lb *Lobby) {
+func (User *User) read(lb *Lobby, mu *sync.Mutex) {
 	defer func() {
 		User.Conn.Close()
+		//mu.Unlock()
 	}()
 	for {
 		select {
@@ -30,9 +32,10 @@ func (User *User) read(lb *Lobby) {
 	}
 }
 
-func (User *User) write(lb *Lobby) {
-	defer User.Conn.Close()
-
+func (User *User) write(lb *Lobby, mu *sync.Mutex) {
+	defer func() {
+		User.Conn.Close()
+	}()
 	for {
 		_, data, err := User.Conn.ReadMessage()
 		if err != nil {

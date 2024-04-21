@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"math/rand"
+	"sync"
 )
 
 type Khil struct {
@@ -14,16 +15,15 @@ type Khil struct {
 
 func ConnectKhil(ctx context.Context, lb *Lobby) fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		lb.Khil = &Khil{
-			User: User{
-				ID:      rand.Int(),
-				Conn:    c,
-				Message: make(chan *message),
-			},
+		lb.Khil = &User{
+			ID:      rand.Int(),
+			Conn:    c,
+			Message: make(chan *message),
 		}
 
-		go lb.Khil.write(lb)
-		go lb.Khil.read(lb)
+		mu := &sync.Mutex{}
+		go lb.Khil.write(lb, mu)
+		go lb.Khil.read(lb, mu)
 
 		log.Info("khil connected")
 
