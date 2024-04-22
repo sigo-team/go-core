@@ -3,15 +3,10 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"gopkg.in/loremipsum.v1"
-	"math/rand"
-	"sigo/iternal/api"
-	"sigo/iternal/game"
-	"sync"
+	"sigo/internal/game"
 )
 
 type Player struct {
@@ -24,12 +19,14 @@ type Player struct {
 
 func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
 	return websocket.New(func(conn *websocket.Conn) {
+		uid := conn.Locals("uid")
 
 		player := &Player{
 			User: User{
-				ID:      rand.Int(),
-				Conn:    conn,
-				Message: make(chan *message, lb.PlayersAmount),
+				ID:       uid.(string),
+				Conn:     conn,
+				Receiver: make(chan *message, lb.PlayersAmount),
+				Sender:   make(chan *message, lb.PlayersAmount),
 			},
 			Name:  loremipsum.New().Word(),
 			Score: 0,
@@ -37,37 +34,13 @@ func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
 
 		lb.Register <- player
 
-		request := api.Request{
-			Type: "greeting",
-			Data: api.Data{
-				ThemeIndex:    0,
-				QuestionIndex: 0,
-				PlayerId:      player.ID,
-				ScoreChanges:  0,
-				ChooserID:     0,
-			},
-		}
-		marshalled, err := json.Marshal(request)
-		if err != nil {
-			log.Errorf("Error marshalling request: %v", err)
-		}
-
-		msg := &message{
-			User:    &player.User,
-			Content: []byte(marshalled),
-		}
-		lb.Broadcast <- msg
-
-		mu := &sync.Mutex{}
-
-		go player.write(lb, mu)
-		go player.read(lb, mu)
-
-		player.sendSiPackage(lb.SiPck)
-		player.Message <- &message{
-			User:    nil,
-			Content: []byte(fmt.Sprintf("%s", lb.Players)),
-		}
+		go func() {
+			if err := player.write(lb); err != nil {
+				lb.Unregister <- player
+				return
+			}
+		}()
+		go player.read(lb)
 
 		select {
 		case <-ctx.Done():
@@ -106,8 +79,8 @@ func (player *Player) sendSiPackage(p *game.Package) {
 	if err != nil {
 		return
 	}
-	player.Message <- &message{
-		User:    nil,
+	player.Receiver <- &message{
+		UserID:  "",
 		Content: bytes,
 	}
 }
