@@ -42,6 +42,7 @@ type Data struct {
 	ChooserID     string `json:"chooserId,omitempty"`
 }
 
+// todo: error
 func (r Request) Marshall() []byte {
 	marshal, err := json.Marshal(r)
 	if err != nil {

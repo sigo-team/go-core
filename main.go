@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"sigo/internal/config"
 	"sigo/internal/game"
-	"sigo/internal/http-server/handlers"
 	"sigo/internal/ws"
 	"syscall"
 )
@@ -25,6 +24,7 @@ func main() {
 	cfg := config.MustLoad(*configPath)
 	log.Infof("App started. configPath: %s", *configPath)
 
+	// FIXME
 	siPck := loadSiPackage(siPackagePath)
 	defer func() {
 		err := game.RemovePackage()
@@ -37,16 +37,6 @@ func main() {
 	lb := ws.NewLobby(&siPck, cfg.PlayersAmount)
 
 	app := fiber.New()
-
-	app.Get("/", handlers.UpgradeHandler())
-	app.Get("/", ws.ConnectPlayerHandler(ctx, lb))
-	app.Get("/khil", handlers.UpgradeHandler())
-	app.Get("/khil", ws.ConnectKhil(ctx, lb))
-
-	app.Get("/test", func(c *fiber.Ctx) error {
-
-		return nil
-	})
 
 	go func() {
 		if err := app.Listen(":3000"); err != nil {

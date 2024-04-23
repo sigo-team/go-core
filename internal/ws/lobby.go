@@ -219,7 +219,6 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 					lb.SendAll(msg)
 					lb.Respondent = lb.Players[msg.UserID]
 					lb.Statement.Status = "answering"
-					log.Debug("debuging")
 				}
 			}
 
