@@ -4,13 +4,13 @@ import (
 	"context"
 	"github.com/gofiber/fiber/v2/log"
 	"sigo/internal/api"
-	"sigo/internal/game"
+	"sigo/internal/lib"
 	"time"
 )
 
 type Lobby struct {
 	Statement     *Statement
-	SiPck         *game.Package
+	SiPck         *lib.Package
 	Khil          *User
 	Chooser       *Player
 	Respondent    *Player
@@ -27,12 +27,12 @@ type Lobby struct {
 type Statement struct {
 	Status        string
 	RoundIndex    uint
-	Question      *game.Question
+	Question      *lib.Question
 	SlideIndex    int
 	UsedQuestions [][]bool
 }
 
-func NewLobby(siPck *game.Package, playersAmount uint) *Lobby {
+func NewLobby(siPck *lib.Package, playersAmount uint) *Lobby {
 	// TODO: config
 	lb := &Lobby{
 		Statement: &Statement{

@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"gopkg.in/loremipsum.v1"
-	"sigo/internal/game"
+	"sigo/internal/lib"
 )
 
 type Player struct {
@@ -51,13 +51,13 @@ func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
 	})
 }
 
-func (player *Player) sendSiPackage(p *game.Package) {
+func (player *Player) sendSiPackage(p *lib.Package) {
 	marshal, err := json.Marshal(p)
 	if err != nil {
 		return
 	}
 
-	siPckHeaders := new(game.Package)
+	siPckHeaders := new(lib.Package)
 	err = json.Unmarshal(marshal, &siPckHeaders)
 	if err != nil {
 		return

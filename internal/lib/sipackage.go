@@ -1,4 +1,4 @@
-package game
+package lib
 
 import (
 	"archive/zip"

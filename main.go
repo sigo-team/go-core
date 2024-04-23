@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"sigo/internal/config"
-	"sigo/internal/game"
+	"sigo/internal/lib"
 	"sigo/internal/ws"
 	"syscall"
 )
@@ -27,7 +27,7 @@ func main() {
 	// FIXME
 	siPck := loadSiPackage(siPackagePath)
 	defer func() {
-		err := game.RemovePackage()
+		err := lib.RemovePackage()
 		if err != nil {
 			log.Errorf("Error removing package: %v", err)
 		}
@@ -57,13 +57,13 @@ func main() {
 	log.Info("app closed")
 }
 
-func loadSiPackage(siPackagePath *string) game.Package {
-	err := game.Unzip(*siPackagePath)
+func loadSiPackage(siPackagePath *string) lib.Package {
+	err := lib.Unzip(*siPackagePath)
 	if err != nil {
 		log.Fatalf("Cannot unzip package: %s", err)
 	}
 
-	var siPck game.Package
+	var siPck lib.Package
 	file, err := os.ReadFile("./unzipSiPackage/content.json")
 	if err != nil {
 		log.Fatalf("Cannot read content.json: %s", err)
@@ -78,7 +78,7 @@ func loadSiPackage(siPackagePath *string) game.Package {
 }
 
 func writeRandomPackage() {
-	pck := game.GenerateRandomPackage()
+	pck := lib.GenerateRandomPackage()
 
 	indent, err := json.MarshalIndent(pck, "", "")
 	if err != nil {

@@ -2,18 +2,20 @@ package services
 
 import (
 	"errors"
+	"sigo/internal/lib"
 	"strconv"
 	"strings"
 )
 
 type MonoService struct {
 	DB struct {
-		Rooms []Room
+		idManager *lib.IdentifierManager
+		Rooms     []Room
 	}
 }
 
 type Room struct {
-	ID                                    int
+	ID                                    int64
 	Public                                bool
 	Players                               int
 	MaxPlayers                            int
@@ -55,9 +57,12 @@ func ValidateRoom(r Room) bool {
 	return true
 }
 
-func NewMono() *MonoService {
+func NewMonoService() *MonoService {
 	return &MonoService{
-		DB: struct{ Rooms []Room }{Rooms: make([]Room, 0)},
+		DB: struct {
+			idManager *lib.IdentifierManager
+			Rooms     []Room
+		}{idManager: lib.NewIdentifierManager(), Rooms: make([]Room, 0)},
 	}
 }
 
@@ -68,12 +73,8 @@ var (
 )
 
 func (s *MonoService) CreateRoom(r Room) (Room, error) {
-	if len(s.DB.Rooms) == 0 {
-		r.ID = 10000
-	} else {
-		r.ID = s.DB.Rooms[len(s.DB.Rooms)-1].ID + 1
-	}
-	r.Public = true
+	r.ID = s.DB.idManager.NewID()
+	r.Public = true // FIXME
 	if !ValidateRoom(r) {
 		return Room{}, ValidationErr
 	}
@@ -98,7 +99,7 @@ func (s *MonoService) GetRooms(page int, key string) ([]Room, int, error) {
 	}
 	filteredRooms := make([]Room, 0)
 	for _, room := range s.DB.Rooms {
-		if strings.Contains(strconv.Itoa(room.ID), key) || strings.Contains(room.PackageName, key) {
+		if strings.Contains(strconv.FormatInt(room.ID, 10), key) || strings.Contains(room.PackageName, key) {
 			filteredRooms = append(filteredRooms, room)
 		}
 	}

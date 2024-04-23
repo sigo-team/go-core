@@ -1,13 +1,12 @@
 package services
 
 import (
-	"errors"
 	"github.com/goombaio/namegenerator"
 	"time"
 )
 
 type User struct {
-	ID   int
+	ID   int64
 	Name string
 }
 
@@ -31,7 +30,7 @@ func NewUserService() *UserService {
 	}
 }
 
-func (b *UserService) CreateUser(name string) (User, error) {
+func (b *UserService) CreateUser(name string) User {
 	if name == "" {
 		name = b.NameGenerator.Generate()
 	}
@@ -44,22 +43,18 @@ func (b *UserService) CreateUser(name string) (User, error) {
 		usr.ID = b.DB.Users[len(b.DB.Users)-1].ID + 1
 	}
 	b.DB.Users = append(b.DB.Users, usr)
-	return usr, nil
+	return usr
 }
 
-func (b *UserService) GetUsers() ([]User, error) {
-	return b.DB.Users, nil
+func (b *UserService) GetUsers() []User {
+	return b.DB.Users
 }
 
-var (
-	NotFoundErr = errors.New("user not found")
-)
-
-func (b *UserService) GetUser(id int) (User, error) {
+func (b *UserService) GetUser(id int64) User {
 	for _, user := range b.DB.Users {
 		if user.ID == id {
-			return user, nil
+			return user
 		}
 	}
-	return User{}, NotFoundErr
+	return User{}
 }

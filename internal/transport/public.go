@@ -1,17 +1,13 @@
-package http_server
+package transport
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"sigo/internal/controllers"
-	"sigo/internal/services"
 	"sigo/internal/ws"
 )
 
-func PublicRouters(app *fiber.App) {
+func PublicRoutes(app *fiber.App, r *controllers.RoomHandlers) {
 	route := app.Group("/api/v1")
-
-	monoService := services.NewMono()
-	r := controllers.RoomHandlers{Service: monoService}
 
 	route.Post("/room", r.CreateRoom)
 	route.Get("/room", r.GetRooms)

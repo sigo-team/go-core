@@ -1,2 +1,4 @@
 env: "local"
 playersAmount: 100
+JWT_SECRET: GPfYIQUkGexayJilJyz6brI0mthApP3HMUG
+JWT_MAX_AGE: 40m
