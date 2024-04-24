@@ -4,28 +4,29 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2/log"
 	"sigo/internal/controllers"
+	"sigo/internal/lib"
 	"sigo/internal/services"
 )
 
-func read(conn *websocket.Conn, user *services.User) {
+func transitIn(conn *websocket.Conn, user *services.User) {
 	for {
-		_, msg, err := conn.ReadMessage()
+		response := new(lib.Response)
+		err := conn.ReadJSON(response)
 		if err != nil {
 			log.Errorf("Error while reading from websocket: %s", err)
 			continue
 		}
 
-		controllers.SendMessage(user, msg)
+		controllers.SendMessage(conn, user, response)
 	}
 }
 
-func write(conn *websocket.Conn, user *services.User) {
+func transitOut(conn *websocket.Conn, user *services.User) {
 	for {
-		msg := controllers.ReadMessage(user)
-		err := conn.WriteMessage(1, msg)
+		request := controllers.ReadMessage(user)
+		err := conn.WriteJSON(request)
 		if err != nil {
 			log.Errorf("Error while writing to websocket: %s", err)
-			continue
 		}
 	}
 }

@@ -3,7 +3,7 @@ package ws
 import (
 	"context"
 	"github.com/gofiber/fiber/v2/log"
-	"sigo/internal/api"
+	"sigo/internal/controllers"
 	"sigo/internal/lib"
 	"time"
 )
@@ -71,7 +71,7 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 		case msg := <-lb.KhilBC:
 			{
 				log.Debugf("%s", lb.Statement.Status)
-				response := api.ReadResponse(msg.Content)
+				response := controllers.ReadMessage(msg.Content)
 
 				switch lb.Statement.Status {
 				case "waitForStart":
@@ -81,9 +81,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 							{
 								if len(lb.Players) == 0 {
 									log.Error("Can't start lobby, no players left")
-									request := api.Request{
+									request := lib.Request{
 										Type: "error",
-										Data: api.Data{
+										Data: lib.Data{
 											Content: "Can't start lobby, no players left",
 										},
 									}.Marshall()
@@ -113,7 +113,7 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 							if lb.Statement.SlideIndex >= len(lb.Statement.Question.QuestionSlides) {
 								lb.Statement.SlideIndex = 0
 								lb.Statement.Status = "buttoning"
-								request := api.Request{
+								request := lib.Request{
 									Type: "setButtoning",
 								}.Marshall()
 
@@ -138,9 +138,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 							lb.Respondent.Score += scoreChanges
 							lb.SetChooser(lb.Respondent)
 							lb.Respondent = nil
-							request := api.Request{
+							request := lib.Request{
 								Type: "changeScore",
-								Data: api.Data{
+								Data: lib.Data{
 									PlayerId:     lb.Respondent.ID,
 									ScoreChanges: scoreChanges,
 								},
@@ -157,9 +157,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 							scoreChanges := -*lb.Statement.Question.PriceMin
 							lb.Respondent.Score += scoreChanges
 							lb.Respondent = nil
-							request := api.Request{
+							request := lib.Request{
 								Type: "changeScore",
-								Data: api.Data{
+								Data: lib.Data{
 									PlayerId:     lb.Respondent.ID,
 									ScoreChanges: scoreChanges,
 								},
@@ -177,7 +177,7 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 			}
 		case msg := <-lb.ChooserBC:
 			{
-				response := api.ReadResponse(msg.Content)
+				response := controllers.ReadMessage(msg.Content)
 
 				switch lb.Statement.Status {
 				case "choosing":
@@ -189,9 +189,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 
 						lb.Statement.Question = lb.SiPck.Rounds[roundIdx].Themes[themeIdx].Questions[questionIdx]
 
-						request := api.Request{
+						request := lib.Request{
 							Type: "chooseQuestion",
-							Data: api.Data{
+							Data: lib.Data{
 								ThemeIndex:    themeIdx,
 								QuestionIndex: questionIdx,
 							},
@@ -211,7 +211,7 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 
 		case msg := <-lb.ButtonBC:
 			{
-				response := api.ReadResponse(msg.Content)
+				response := controllers.ReadMessage(msg.Content)
 				_ = response
 
 				switch lb.Statement.Status {
@@ -226,9 +226,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 		case <-time.After(buttoningTO):
 			{
 				if lb.Statement.Status == "buttoning" {
-					request := api.Request{
+					request := lib.Request{
 						Type: "timeout",
-						Data: api.Data{
+						Data: lib.Data{
 							Content: "buttoning",
 						},
 					}.Marshall()
@@ -244,9 +244,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 		case <-time.After(answeringTO):
 			{
 				if lb.Statement.Status == "answering" {
-					request := api.Request{
+					request := lib.Request{
 						Type: "timeout",
-						Data: api.Data{
+						Data: lib.Data{
 							Content: "answering",
 						},
 					}.Marshall()
@@ -271,9 +271,9 @@ func (lb *Lobby) RunLobby(ctx context.Context) {
 func (lb *Lobby) AddPlayer(player *Player) {
 	lb.Players[player.ID] = player
 	player.sendSiPackage(lb.SiPck)
-	content := api.Request{
+	content := lib.Request{
 		Type: "playerConnect",
-		Data: api.Data{PlayerId: player.ID},
+		Data: lib.Data{PlayerId: player.ID},
 	}.Marshall()
 
 	lb.SendAll(&message{
@@ -286,9 +286,9 @@ func (lb *Lobby) AddPlayer(player *Player) {
 
 func (lb *Lobby) RemovePlayer(player *Player) {
 	delete(lb.Players, player.ID)
-	content := api.Request{
+	content := lib.Request{
 		Type: "playerDisconnect",
-		Data: api.Data{PlayerId: player.ID},
+		Data: lib.Data{PlayerId: player.ID},
 	}.Marshall()
 
 	lb.SendAll(&message{
@@ -308,9 +308,9 @@ func (lb Lobby) SendAll(msg *message) {
 func (lb Lobby) SendSlide() {
 	slideIdx := lb.Statement.SlideIndex
 
-	request := api.Request{
+	request := lib.Request{
 		Type: "sendSlide",
-		Data: api.Data{
+		Data: lib.Data{
 			Type:    *lb.Statement.Question.QuestionSlides[slideIdx].ContentType,
 			Content: *lb.Statement.Question.QuestionSlides[slideIdx].Content,
 		},

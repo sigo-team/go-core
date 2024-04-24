@@ -3,7 +3,8 @@ package ws
 import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2/log"
-	"sigo/internal/api"
+	"sigo/internal/controllers"
+	"sigo/internal/lib"
 )
 
 type message struct {
@@ -42,14 +43,14 @@ func (user *User) write(lb *Lobby) error {
 			return err
 		}
 
-		response := api.ReadResponse(data)
+		response := controllers.ReadMessage(data)
 		if response.Type == "pressButton" {
 			log.Debug("Button pressed")
 			msg := &message{
 				UserID: user.ID,
-				Content: api.Request{
+				Content: lib.Request{
 					Type: "pressButton",
-					Data: api.Data{
+					Data: lib.Data{
 						PlayerId: user.ID,
 					},
 				}.Marshall(),

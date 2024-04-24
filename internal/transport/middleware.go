@@ -2,7 +2,10 @@ package transport
 
 import (
 	"context"
+	"fmt"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/golang-jwt/jwt"
 	"sigo/internal/config"
 	"sigo/internal/lib"
@@ -48,7 +51,19 @@ func AuthMiddleware(idManager *lib.IdentifierManager, cfg *config.Config) fiber.
 				HTTPOnly: true,
 			})
 		}
+
 		c.SetUserContext(context.WithValue(c.UserContext(), UserIDKey, userID))
 		return c.Next()
+	}
+}
+
+func UpgraderMiddleware() fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(ctx) {
+			uid := ctx.UserContext().Value(UserIDKey).(int64)
+			log.Info(fmt.Sprintf("Successfully upgrade required %s", uid))
+			return ctx.Next()
+		}
+		return fiber.ErrUpgradeRequired
 	}
 }

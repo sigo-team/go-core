@@ -18,7 +18,9 @@ type Player struct {
 // todo: write and read to User
 
 func ConnectPlayerHandler(ctx context.Context, lb *Lobby) fiber.Handler {
+
 	return websocket.New(func(conn *websocket.Conn) {
+		conn.Locals()
 		uid := conn.Locals("uid")
 
 		player := &Player{

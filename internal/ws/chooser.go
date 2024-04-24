@@ -1,15 +1,17 @@
 package ws
 
-import "sigo/internal/api"
+import (
+	"sigo/internal/lib"
+)
 
 func (lb *Lobby) SetChooser(player *Player) {
 
 	lb.Chooser = player
 	lb.ChooserBC = player.Sender
 
-	content := api.Request{
+	content := lib.Request{
 		Type: "setChooser",
-		Data: api.Data{
+		Data: lib.Data{
 			PlayerId: lb.Chooser.ID,
 		},
 	}.Marshall()

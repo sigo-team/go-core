@@ -9,7 +9,7 @@ import (
 )
 
 type MonoService interface {
-	CreateRoom(services.Room) (services.Room, error)
+	CreateRoom(services.Room) (int64, error)
 	GetRooms(int, string) ([]services.Room, int, error)
 }
 
@@ -42,7 +42,7 @@ func (r *RoomHandlers) CreateRoom(ctx *fiber.Ctx) error {
 		return err
 	}
 	room.PackageName = file.Filename
-	room, err = r.Service.CreateRoom(room)
+	_, err = r.Service.CreateRoom(room)
 	if err != nil {
 		return err
 	}
