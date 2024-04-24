@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
 	"sigo/internal/config"
@@ -48,7 +47,7 @@ func AuthMiddleware(idManager *lib.IdentifierManager, cfg *config.Config) fiber.
 				HTTPOnly: true,
 			})
 		}
-		c.SetUserContext(context.WithValue(c.UserContext(), UserIDKey, userID))
+		c.Locals(UserIDKey, userID)
 		return c.Next()
 	}
 }
