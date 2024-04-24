@@ -7,7 +7,7 @@ import (
 	"sigo/internal/services"
 )
 
-func ConnectPlayer(us *services.UserService, ctx context.Context, room *services.Room) fiber.Handler {
+func ConnectPlayer(us *services.UserService, ctx context.Context) fiber.Handler {
 	return websocket.New(func(conn *websocket.Conn) {
 		defer conn.Close()
 

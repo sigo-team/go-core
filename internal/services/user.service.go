@@ -14,9 +14,10 @@ type User struct {
 }
 
 type UserService struct {
-	NameGenerator namegenerator.Generator
-	DB            struct {
-		Users []User
+	NameGenerator     namegenerator.Generator
+	IdentifierManager *lib.IdentifierManager
+	DB                struct {
+		Users map[int64]*User
 	}
 }
 
@@ -24,43 +25,29 @@ func NewUserService() *UserService {
 	seed := time.Now().UTC().UnixNano()
 	nameGenerator := namegenerator.NewNameGenerator(seed)
 	return &UserService{
-		NameGenerator: nameGenerator,
-		DB: struct {
-			Users []User
-		}{
-			Users: make([]User, 0),
-		},
+		NameGenerator:     nameGenerator,
+		IdentifierManager: lib.NewIdentifierManager(),
+		DB:                struct{ Users map[int64]*User }{Users: make(map[int64]*User)},
 	}
 }
 
-func (b *UserService) CreateUser(name string) User {
+func (b *UserService) CreateUser(name string) *User {
 	if name == "" {
 		name = b.NameGenerator.Generate()
 	}
-	usr := User{
+	userId := b.IdentifierManager.NewID()
+	usr := &User{
 		Name: name,
+		ID:   userId,
 		// fixme (100)
 		Sender:   make(chan lib.Request, 100),
 		Receiver: make(chan lib.Response, 100),
 	}
-	if len(b.DB.Users) == 0 {
-		usr.ID = 10000
-	} else {
-		usr.ID = b.DB.Users[len(b.DB.Users)-1].ID + 1
-	}
-	b.DB.Users = append(b.DB.Users, usr)
+
+	b.DB.Users[userId] = usr
 	return usr
 }
 
-func (b *UserService) GetUsers() []User {
-	return b.DB.Users
-}
-
-func (b *UserService) GetUser(id int64) User {
-	for _, user := range b.DB.Users {
-		if user.ID == id {
-			return user
-		}
-	}
-	return User{}
+func (b *UserService) GetUser(userId int64) *User {
+	return b.DB.Users[userId]
 }

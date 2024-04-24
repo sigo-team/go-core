@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"mime/multipart"
 	"sigo/internal/services"
 	"strconv"
@@ -10,11 +11,18 @@ import (
 
 type MonoService interface {
 	CreateRoom(services.Room) (int64, error)
-	GetRooms(int, string) ([]services.Room, int, error)
+	GetRooms(int, string) (map[int64]*services.Room, int, error)
+	//GetRoom(int64) (*services.Room, error)
+}
+
+type UserService interface {
+	CreateUser(string) *services.User
+	GetUser(int64) *services.User
 }
 
 type RoomHandlers struct {
-	Service MonoService
+	MonoService MonoService
+	UserService UserService
 }
 
 func (r *RoomHandlers) CreateRoom(ctx *fiber.Ctx) error {
@@ -42,10 +50,20 @@ func (r *RoomHandlers) CreateRoom(ctx *fiber.Ctx) error {
 		return err
 	}
 	room.PackageName = file.Filename
-	_, err = r.Service.CreateRoom(room)
+
+	userId := ctx.Locals(UserIDKey).(int64)
+
+	room.Khil = userId
+	roomId, err := r.MonoService.CreateRoom(room)
 	if err != nil {
 		return err
 	}
+
+	ctx.Locals("roomId", roomId)
+	if err := ctx.Next(); err != nil {
+		log.Errorf("Cannot go ctx.next: %s", err.Error())
+	}
+
 	return ctx.SendString(fmt.Sprintf("Room created, id: %d", room.ID))
 }
 
@@ -55,12 +73,12 @@ func (r *RoomHandlers) GetRooms(ctx *fiber.Ctx) error {
 		return err
 	}
 	key := ctx.Query("key")
-	rooms, pages, err := r.Service.GetRooms(page, key)
+	rooms, pages, err := r.MonoService.GetRooms(page, key)
 	if err != nil {
 		return err
 	}
 	return ctx.JSON(struct {
-		Pages int             `json:"pages"`
-		Rooms []services.Room `json:"rooms"`
+		Pages int                      `json:"pages"`
+		Rooms map[int64]*services.Room `json:"rooms"`
 	}{pages, rooms})
 }

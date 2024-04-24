@@ -3,15 +3,13 @@ package services
 import (
 	"errors"
 	"sigo/internal/lib"
-	"strconv"
-	"strings"
 )
 
 type Room struct {
 	ID          int64
 	Public      bool
 	Players     map[int64]*Player
-	Khil        *Khil
+	Khil        int64
 	MaxPlayers  int
 	PackageName string
 
@@ -56,8 +54,8 @@ func NewMonoService() *MonoService {
 	return &MonoService{
 		DB: struct {
 			idManager *lib.IdentifierManager
-			Rooms     []Room
-		}{idManager: lib.NewIdentifierManager(), Rooms: make([]Room, 0)},
+			Rooms     map[int64]*Room
+		}{idManager: &lib.IdentifierManager{}, Rooms: make(map[int64]*Room)},
 	}
 }
 
@@ -73,35 +71,37 @@ func (s *MonoService) CreateRoom(r Room) (int64, error) {
 	if !ValidateRoom(r) {
 		return 0, ValidationErr
 	}
-	s.DB.Rooms = append(s.DB.Rooms, r)
+	s.DB.Rooms[r.ID] = &r
 	return r.ID, nil
 }
 
-func (s *MonoService) GetRooms(page int, key string) ([]Room, int, error) {
-	if key != "" && len(key) < 3 {
-		return []Room{}, 0, TooShortKeyErr
-	}
-	if page <= 0 {
-		return []Room{}, 0, OutOfRangeErr
-	}
-	if key == "" {
-		firstRoomOnPageIdx := (page - 1) * 8
-		lastRoomOnPageIdx := (page-1)*8 + 7
-		if firstRoomOnPageIdx >= len(s.DB.Rooms)-1 && firstRoomOnPageIdx != 0 {
+func (s *MonoService) GetRooms(page int, key string) (map[int64]*Room, int, error) {
+	return s.DB.Rooms, 1, nil
+
+	/*	if key != "" && len(key) < 3 {
+			return []Room{}, 0, TooShortKeyErr
+		}
+		if page <= 0 {
 			return []Room{}, 0, OutOfRangeErr
 		}
-		return s.DB.Rooms[firstRoomOnPageIdx:min(len(s.DB.Rooms), lastRoomOnPageIdx+1)], (len(s.DB.Rooms)-1)/8 + 1, nil
-	}
-	filteredRooms := make([]Room, 0)
-	for _, room := range s.DB.Rooms {
-		if strings.Contains(strconv.FormatInt(room.ID, 10), key) || strings.Contains(room.PackageName, key) {
-			filteredRooms = append(filteredRooms, room)
+		if key == "" {
+			firstRoomOnPageIdx := (page - 1) * 8
+			lastRoomOnPageIdx := (page-1)*8 + 7
+			if firstRoomOnPageIdx >= len(s.DB.Rooms)-1 && firstRoomOnPageIdx != 0 {
+				return []Room{}, 0, OutOfRangeErr
+			}
+			return s.DB.Rooms[firstRoomOnPageIdx:min(len(s.DB.Rooms), lastRoomOnPageIdx+1)], (len(s.DB.Rooms)-1)/8 + 1, nil
 		}
-	}
-	firstRoomOnPageIdx := (page - 1) * 8
-	lastRoomOnPageIdx := (page-1)*8 + 7
-	if firstRoomOnPageIdx >= len(filteredRooms)-1 && firstRoomOnPageIdx != 0 {
-		return []Room{}, 0, OutOfRangeErr
-	}
-	return filteredRooms[firstRoomOnPageIdx:min(len(filteredRooms), lastRoomOnPageIdx+1)], (len(filteredRooms)-1)/8 + 1, nil
+		filteredRooms := make(map[int64]Room)
+		for _, room := range s.DB.Rooms {
+			if strings.Contains(strconv.FormatInt(room.ID, 10), key) || strings.Contains(room.PackageName, key) {
+				filteredRooms[room.ID] = *room
+			}
+		}
+		firstRoomOnPageIdx := (page - 1) * 8
+		lastRoomOnPageIdx := (page-1)*8 + 7
+		if firstRoomOnPageIdx >= len(filteredRooms)-1 && firstRoomOnPageIdx != 0 {
+			return []Room{}, 0, OutOfRangeErr
+		}
+		return filteredRooms[firstRoomOnPageIdx:min(len(filteredRooms), lastRoomOnPageIdx+1)], (len(filteredRooms)-1)/8 + 1, nil*/
 }

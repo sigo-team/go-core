@@ -7,6 +7,6 @@ import (
 type MonoService struct {
 	DB struct {
 		idManager *lib.IdentifierManager
-		Rooms     []Room
+		Rooms     map[int64]*Room
 	}
 }

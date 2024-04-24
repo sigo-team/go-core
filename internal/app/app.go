@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -10,14 +11,14 @@ import (
 	"os"
 	"sigo/internal/config"
 	"sigo/internal/controllers"
-	"sigo/internal/lib"
 	"sigo/internal/services"
 	http_server "sigo/internal/transport"
 )
 
 type App struct {
-	app *fiber.App
-	cfg *config.Config
+	app        *fiber.App
+	cfg        *config.Config
+	cancelFunc context.CancelFunc
 }
 
 func New(cfg *config.Config) *App {
@@ -25,9 +26,10 @@ func New(cfg *config.Config) *App {
 		BodyLimit: 256 * 1024 * 1024,
 	})
 
-	userIdManager := lib.NewIdentifierManager()
+	monoService := services.NewMonoService()
+	userService := services.NewUserService()
 
-	app.Use(http_server.AuthMiddleware(userIdManager, cfg))
+	app.Use(http_server.AuthMiddleware(userService.IdentifierManager, cfg))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000",
 		AllowMethods:     "*",
@@ -36,13 +38,17 @@ func New(cfg *config.Config) *App {
 	}))
 	app.Use(fiber_logger.New())
 
-	monoService := services.NewMonoService()
+	closingCtx, closeCtx := context.WithCancel(context.Background())
 
-	http_server.PublicRoutes(app, &controllers.RoomHandlers{Service: monoService})
+	http_server.PublicRoutes(app, closingCtx, &controllers.RoomHandlers{
+		MonoService: monoService,
+		UserService: userService,
+	})
 
 	return &App{
-		app: app,
-		cfg: cfg,
+		app:        app,
+		cfg:        cfg,
+		cancelFunc: closeCtx,
 	}
 }
 
