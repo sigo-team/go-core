@@ -6,8 +6,10 @@ import (
 )
 
 type User struct {
-	ID   int64
-	Name string
+	ID       int64
+	Name     string
+	Sender   chan []byte
+	Receiver chan []byte
 }
 
 type UserService struct {
@@ -36,6 +38,9 @@ func (b *UserService) CreateUser(name string) User {
 	}
 	usr := User{
 		Name: name,
+		// fixme (100)
+		Sender:   make(chan []byte, 100),
+		Receiver: make(chan []byte, 100),
 	}
 	if len(b.DB.Users) == 0 {
 		usr.ID = 10000

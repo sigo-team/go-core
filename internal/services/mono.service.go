@@ -15,11 +15,12 @@ type MonoService struct {
 }
 
 type Room struct {
-	ID                                    int64
-	Public                                bool
-	Players                               int
-	MaxPlayers                            int
-	PackageName                           string
+	ID          int64
+	Public      bool
+	Players     int
+	MaxPlayers  int
+	PackageName string
+
 	RoundTime                             int  `form:"round_time"`
 	TimeToThinkAfterPressingTheButton     int  `form:"time_to_think_after_pressing_the_button"`
 	QuestionTime                          int  `form:"question_time"`
