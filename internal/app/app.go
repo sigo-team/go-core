@@ -10,6 +10,7 @@ import (
 	"os"
 	"sigo/internal/config"
 	"sigo/internal/controllers"
+	"sigo/internal/lib"
 	"sigo/internal/services"
 	http_server "sigo/internal/transport"
 )
@@ -20,13 +21,13 @@ type App struct {
 }
 
 func New(cfg *config.Config) *App {
-	userService := services.NewUserService()
-
 	app := fiber.New(fiber.Config{
 		BodyLimit: 256 * 1024 * 1024,
 	})
 
-	app.Use(http_server.AuthMiddleware(userService, cfg))
+	userIdManager := lib.NewIdentifierManager()
+
+	app.Use(http_server.AuthMiddleware(userIdManager, cfg))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000",
 		AllowMethods:     "*",
