@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"context"
 	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -51,12 +50,10 @@ func AuthMiddleware(idManager *lib.IdentifierManager, cfg *config.Config) fiber.
 				HTTPOnly: true,
 			})
 		}
-
-		c.SetUserContext(context.WithValue(c.UserContext(), UserIDKey, userID))
+		c.Locals(UserIDKey, userID)
 		return c.Next()
 	}
 }
-
 func UpgraderMiddleware() fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(ctx) {
