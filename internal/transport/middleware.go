@@ -6,7 +6,6 @@ import (
 	"github.com/golang-jwt/jwt"
 	"sigo/internal/config"
 	"sigo/internal/lib"
-	"sigo/internal/services"
 	"strconv"
 	"time"
 )
@@ -14,46 +13,42 @@ import (
 const CookieName = "SESSION_ID"
 const UserIDKey = "user-id-key"
 
-func AuthMiddleware(userService *services.UserService, cfg *config.Config) fiber.Handler {
-	return func(c *fiber.Ctx) (err error) {
+func tryToParseCookie(cookie string, cfg *config.Config) (int64, error) {
+	session, err := lib.ParseToken(cookie, cfg.JWTSecret)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseInt(session.Subject, 10, 64)
+}
+
+func AuthMiddleware(idManager *lib.IdentifierManager, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		var (
-			usr    services.User
+			userID int64
 			cookie string
+			err    error
 		)
-
-		defer func() {
-			if err != nil {
-				usr = userService.CreateUser("")
-				cookie, err = lib.NewToken(jwt.StandardClaims{
-					IssuedAt:  time.Now().Unix(),
-					ExpiresAt: time.Now().Add(cfg.JWTMaxAge).Unix(),
-					Subject:   strconv.FormatInt(usr.ID, 10),
-				}, cfg.JWTSecret)
-				if err != nil {
-					return
-				}
-				c.Cookie(&fiber.Cookie{
-					Name:     CookieName,
-					Value:    cookie,
-					SameSite: fiber.CookieSameSiteNoneMode,
-					Secure:   true,
-					HTTPOnly: true,
-				})
-			}
-			c.SetUserContext(context.WithValue(c.UserContext(), UserIDKey, usr.ID))
-			err = c.Next()
-		}()
-
 		cookie = c.Cookies(CookieName)
-		session, err := lib.ParseToken(cookie, cfg.JWTSecret)
+		userID, err = tryToParseCookie(cookie, cfg)
 		if err != nil {
-			return
+			userID = idManager.NewID()
+			cookie, err = lib.NewToken(jwt.StandardClaims{
+				IssuedAt:  time.Now().Unix(),
+				ExpiresAt: time.Now().Add(cfg.JWTMaxAge).Unix(),
+				Subject:   strconv.FormatInt(userID, 10),
+			}, cfg.JWTSecret)
+			if err != nil {
+				return err
+			}
+			c.Cookie(&fiber.Cookie{
+				Name:     CookieName,
+				Value:    cookie,
+				SameSite: fiber.CookieSameSiteNoneMode,
+				Secure:   true,
+				HTTPOnly: true,
+			})
 		}
-		userID, err := strconv.ParseInt(session.Subject, 10, 64)
-		if err != nil {
-			return
-		}
-		usr = userService.GetUser(userID)
-		return
+		c.SetUserContext(context.WithValue(c.UserContext(), UserIDKey, userID))
+		return c.Next()
 	}
 }
