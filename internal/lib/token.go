@@ -13,5 +13,8 @@ func ParseToken(s string, secret string) (*jwt.StandardClaims, error) {
 	parsedToken, err := jwt.ParseWithClaims(s, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return parsedToken.Claims.(*jwt.StandardClaims), err
 }
