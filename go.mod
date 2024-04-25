@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.4
+	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/ilyakaznacheev/cleanenv v1.5.0

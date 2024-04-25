@@ -3,105 +3,74 @@ package services
 import (
 	"errors"
 	"sigo/internal/lib"
+	"sigo/internal/models"
+	"sort"
 )
 
-type Room struct {
-	ID          int64
-	Public      bool
-	Players     map[int64]*Player
-	Khil        int64
-	MaxPlayers  int
-	PackageName string
-
-	RoundTime                             int  `form:"round_time"`
-	TimeToThinkAfterPressingTheButton     int  `form:"time_to_think_after_pressing_the_button"`
-	QuestionTime                          int  `form:"question_time"`
-	TimeToThinkOnASpecialQuestion         int  `form:"time_to_think_on_a_special_question"`
-	TimeToThinkAtTheFinal                 int  `form:"time_to_think_at_the_final"`
-	EndTheQuestionIfTheAnswerIsCorrect    bool `form:"end_the_question_if_the_answer_is_correct"`
-	GameWithFalseStarts                   bool `form:"game_with_false_starts"`
-	MultimediaWithFalseStarts             bool `form:"multimedia_with_false_starts"`
-	PlaySpecialQuestions                  bool `form:"play_special_questions"`
-	RollBackStatisticsWhenTakingAStepBack bool `form:"roll_back_statistics_when_taking_a_step_back"`
-	AutomaticGamePlay                     bool `form:"automatic_game_play"`
-	DeductPointsForAnIncorrectAnswer      bool `form:"deduct_points_for_an_incorrect_answer"`
-	ShowPlayersWhoHaveLostTheButton       bool `form:"show_players_who_have_lost_the_button"`
+type RoomService struct {
+	identifierManager *lib.IdentifierManager
+	rooms             map[int64]*models.Room
 }
 
-func ValidateRoom(r Room) bool {
-	if r.PackageName == "" {
-		return false
-	}
-	if r.RoundTime <= 0 {
-		return false
-	}
-	if r.TimeToThinkAfterPressingTheButton <= 0 {
-		return false
-	}
-	if r.QuestionTime <= 0 {
-		return false
-	}
-	if r.TimeToThinkOnASpecialQuestion <= 0 {
-		return false
-	}
-	if r.TimeToThinkAtTheFinal <= 0 {
-		return false
-	}
-	return true
+type RoomServiceOptions struct {
+	IdentifierManager *lib.IdentifierManager
 }
 
-func NewMonoService() *MonoService {
-	return &MonoService{
-		DB: struct {
-			idManager *lib.IdentifierManager
-			Rooms     map[int64]*Room
-		}{idManager: &lib.IdentifierManager{}, Rooms: make(map[int64]*Room)},
-	}
+func validateRoomServiceOptions(options RoomServiceOptions) error {
+	return nil
 }
 
-var (
-	OutOfRangeErr  = errors.New("out of range")
-	TooShortKeyErr = errors.New("too short key")
-	ValidationErr  = errors.New("room fields are not valid")
-)
-
-func (s *MonoService) CreateRoom(r Room) (int64, error) {
-	r.ID = s.DB.idManager.NewID()
-	r.Public = true // FIXME
-	if !ValidateRoom(r) {
-		return 0, ValidationErr
+func NewRoomService(options RoomServiceOptions) *RoomService {
+	err := validateRoomServiceOptions(options)
+	if err != nil {
+		panic(err)
 	}
-	s.DB.Rooms[r.ID] = &r
-	return r.ID, nil
+	return &RoomService{identifierManager: options.IdentifierManager, rooms: make(map[int64]*models.Room)}
 }
 
-func (s *MonoService) GetRooms(page int, key string) (map[int64]*Room, int, error) {
-	return s.DB.Rooms, 1, nil
+func (r *RoomService) CreteRoom(options models.RoomOptions) (*models.Room, error) {
+	room, err := models.NewRoom(options)
+	if err != nil {
+		return nil, err
+	}
+	room.Mount(r.identifierManager.NewID())
+	r.rooms[room.Id()] = room
+	return room, nil
+}
 
-	/*	if key != "" && len(key) < 3 {
-			return []Room{}, 0, TooShortKeyErr
-		}
-		if page <= 0 {
-			return []Room{}, 0, OutOfRangeErr
-		}
-		if key == "" {
-			firstRoomOnPageIdx := (page - 1) * 8
-			lastRoomOnPageIdx := (page-1)*8 + 7
-			if firstRoomOnPageIdx >= len(s.DB.Rooms)-1 && firstRoomOnPageIdx != 0 {
-				return []Room{}, 0, OutOfRangeErr
-			}
-			return s.DB.Rooms[firstRoomOnPageIdx:min(len(s.DB.Rooms), lastRoomOnPageIdx+1)], (len(s.DB.Rooms)-1)/8 + 1, nil
-		}
-		filteredRooms := make(map[int64]Room)
-		for _, room := range s.DB.Rooms {
-			if strings.Contains(strconv.FormatInt(room.ID, 10), key) || strings.Contains(room.PackageName, key) {
-				filteredRooms[room.ID] = *room
-			}
-		}
-		firstRoomOnPageIdx := (page - 1) * 8
-		lastRoomOnPageIdx := (page-1)*8 + 7
-		if firstRoomOnPageIdx >= len(filteredRooms)-1 && firstRoomOnPageIdx != 0 {
-			return []Room{}, 0, OutOfRangeErr
-		}
-		return filteredRooms[firstRoomOnPageIdx:min(len(filteredRooms), lastRoomOnPageIdx+1)], (len(filteredRooms)-1)/8 + 1, nil*/
+func (r *RoomService) ReadRoom(roomId int64) (*models.Room, error) {
+	room, ok := r.rooms[roomId]
+	if !ok {
+		return nil, errors.New("")
+	}
+	return room, nil
+}
+
+func partitioned(p int, n int, slice []int64) []int64 {
+	if n < 0 {
+		return []int64{}
+	}
+	start := (n - 1) * p
+	end := n * p
+	return slice[start:min(end, len(slice))]
+}
+
+func (r *RoomService) GetRoomsAmount() int {
+	return len(r.rooms)
+}
+
+func (r *RoomService) ReadRooms(page int) ([]*models.Room, error) {
+	ids := make([]int64, 0)
+	for _, room := range r.rooms {
+		ids = append(ids, room.Id())
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i] < ids[j]
+	})
+	part := partitioned(8, page, ids)
+	rooms := make([]*models.Room, 0)
+	for _, id := range part {
+		rooms = append(rooms, r.rooms[id])
+	}
+	return rooms, nil
 }

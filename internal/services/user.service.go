@@ -1,53 +1,62 @@
 package services
 
 import (
+	"errors"
 	"github.com/goombaio/namegenerator"
 	"sigo/internal/lib"
-	"time"
+	"sigo/internal/models"
 )
 
-type User struct {
-	ID       int64
-	Name     string
-	Sender   chan lib.Request
-	Receiver chan lib.Response
+type UserService struct {
+	nameGenerator     namegenerator.Generator
+	identifierManager *lib.IdentifierManager
+	users             map[int64]*models.User
 }
 
-type UserService struct {
+type UserServiceOptions struct {
 	NameGenerator     namegenerator.Generator
 	IdentifierManager *lib.IdentifierManager
-	DB                struct {
-		Users map[int64]*User
-	}
 }
 
-func NewUserService() *UserService {
-	seed := time.Now().UTC().UnixNano()
-	nameGenerator := namegenerator.NewNameGenerator(seed)
+func validateUserServiceOptions(options UserServiceOptions) error {
+	return nil
+}
+
+func NewUserService(options UserServiceOptions) *UserService {
+	err := validateUserServiceOptions(options)
+	if err != nil {
+		panic(err)
+	}
 	return &UserService{
-		NameGenerator:     nameGenerator,
-		IdentifierManager: lib.NewIdentifierManager(),
-		DB:                struct{ Users map[int64]*User }{Users: make(map[int64]*User)},
+		nameGenerator:     options.NameGenerator,
+		identifierManager: options.IdentifierManager,
+		users:             make(map[int64]*models.User),
 	}
 }
 
-func (b *UserService) CreateUser(name string) *User {
-	if name == "" {
-		name = b.NameGenerator.Generate()
+func (b *UserService) CreateUser() (*models.User, error) {
+	user, err := models.NewUser()
+	if err != nil {
+		return nil, err
 	}
-	userId := b.IdentifierManager.NewID()
-	usr := &User{
-		Name: name,
-		ID:   userId,
-		// fixme (100)
-		Sender:   make(chan lib.Request, 100),
-		Receiver: make(chan lib.Response, 100),
-	}
-
-	b.DB.Users[userId] = usr
-	return usr
+	user.Mount(b.identifierManager.NewID(), b.nameGenerator.Generate())
+	b.users[user.Id()] = user
+	return user, nil
 }
 
-func (b *UserService) GetUser(userId int64) *User {
-	return b.DB.Users[userId]
+func (b *UserService) ReadUser(userId int64) (*models.User, error) {
+	user, ok := b.users[userId]
+	if !ok {
+		return nil, errors.New("")
+	}
+	return user, nil
+}
+
+func (b *UserService) DeleteUser(userId int64) error {
+	_, ok := b.users[userId]
+	if !ok {
+		return errors.New("")
+	}
+	delete(b.users, userId)
+	return nil
 }
