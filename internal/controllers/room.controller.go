@@ -19,6 +19,14 @@ type RoomControllerOptions struct {
 	RoomService *services.RoomService
 }
 
+type UserController struct {
+	userService *services.UserService
+}
+
+type UserControllerOptions struct {
+	UserService *services.UserService
+}
+
 func validateRoomControllerOptions(options RoomControllerOptions) error {
 	if options.RoomService == nil {
 		return errors.New("")
@@ -33,6 +41,23 @@ func NewRoomController(options RoomControllerOptions) *RoomController {
 	}
 	return &RoomController{
 		roomService: options.RoomService,
+	}
+}
+
+func validateUserControllerOptions(options UserControllerOptions) error {
+	if options.UserService == nil {
+		return errors.New("")
+	}
+	return nil
+}
+
+func NewUserController(options UserControllerOptions) *UserController {
+	err := validateUserControllerOptions(options)
+	if err != nil {
+		panic(err)
+	}
+	return &UserController{
+		userService: options.UserService,
 	}
 }
 

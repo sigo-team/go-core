@@ -1,10 +1,14 @@
 package models
 
+import (
+	"sigo/internal/lib"
+)
+
 type User struct {
-	id   int64
-	name string
-	//sender   chan lib.Request
-	//receiver chan lib.Response
+	id       int64
+	name     string
+	sender   chan lib.Request
+	receiver chan lib.Response
 }
 
 func (user *User) Name() string {
@@ -32,7 +36,15 @@ func (user *User) Mount(id int64, name string) {
 func NewUser() (*User, error) {
 	return &User{
 		// FIXME: (100)
-		//sender:   make(chan lib.Request, 100),
-		//receiver: make(chan lib.Response, 100),
+		sender:   make(chan lib.Request, 100),
+		receiver: make(chan lib.Response, 100),
 	}, nil
+}
+
+func (user *User) Sender() chan lib.Request {
+	return user.sender
+}
+
+func (user *User) Receiver() chan lib.Response {
+	return user.receiver
 }

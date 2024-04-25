@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -18,9 +19,9 @@ import (
 )
 
 type App struct {
-	app *fiber.App
-	cfg *config.Config
-	//cancelFunc context.CancelFunc
+	app        *fiber.App
+	cfg        *config.Config
+	cancelFunc context.CancelFunc
 }
 
 func New(cfg *config.Config) *App {
@@ -48,18 +49,23 @@ func New(cfg *config.Config) *App {
 
 	app.Use(http_server.AuthMiddleware(userService, cfg))
 
-	//closingCtx, closeCtx := context.WithCancel(context.Background())
+	closingCtx, closeCtx := context.WithCancel(context.Background())
 
 	roomController := controllers.NewRoomController(
 		controllers.RoomControllerOptions{RoomService: roomService},
 	)
 
-	http_server.PublicRoutes(app, roomController)
+	userController := controllers.NewUserController(
+		controllers.UserControllerOptions{UserService: userService},
+	)
+	_ = userController
+
+	http_server.PublicRoutes(closingCtx, app, roomController)
 
 	return &App{
-		app: app,
-		cfg: cfg,
-		//cancelFunc: closeCtx,
+		app:        app,
+		cfg:        cfg,
+		cancelFunc: closeCtx,
 	}
 }
 
@@ -87,5 +93,6 @@ func (a *App) Stop() {
 	if err != nil {
 		slog.Error(err.Error())
 	}
+	a.cancelFunc()
 	log.Info("Gracefully stopped")
 }

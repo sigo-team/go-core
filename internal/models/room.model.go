@@ -30,26 +30,47 @@ type RoomOptions struct {
 
 type Room struct {
 	owner      *User
-	players    []*User
-	spectators []*User
+	players    map[int64]*User
+	spectators map[int64]*User
 
 	id          int64
 	packageName string
+
+	scoreTab map[int64]int
 
 	config RoomConfig
 }
 
 func (r *Room) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Players     int    `json:"players"`
-		Id          int64  `json:"id"`
-		PackageName string `json:"package_name"`
-		Public      bool   `json:"public"`
+	players := make(map[int64]string, len(r.players))
+	for _, user := range r.players {
+		players[user.id] = user.Name()
+	}
+	owner := struct {
+		Uid  int64  `json:"uid"`
+		Name string `json:"name"`
 	}{
-		Players:     len(r.players),
-		Id:          r.Id(),
-		PackageName: r.packageName,
-		Public:      r.config.Public,
+		Uid:  r.owner.id,
+		Name: r.owner.name,
+	}
+
+	return json.Marshal(struct {
+		Owner struct {
+			Uid  int64  `json:"uid"`
+			Name string `json:"name"`
+		} `json:"owner"`
+		Players       map[int64]string `json:"players"`
+		PlayersAmount int              `json:"playersAmount"`
+		Id            int64            `json:"id"`
+		PackageName   string           `json:"package_name"`
+		Public        bool             `json:"public"`
+	}{
+		Owner:         owner,
+		Players:       players,
+		PlayersAmount: len(r.players),
+		Id:            r.Id(),
+		PackageName:   r.packageName,
+		Public:        r.config.Public,
 	})
 }
 
@@ -84,11 +105,32 @@ func NewRoom(options RoomOptions) (*Room, error) {
 	}
 	return &Room{
 		owner:      options.Owner,
-		players:    make([]*User, 0),
-		spectators: make([]*User, 0),
+		players:    make(map[int64]*User, 0),
+		spectators: make(map[int64]*User, 0),
 
 		packageName: options.PackageName,
 
 		config: options.Config,
 	}, nil
+}
+
+func (r *Room) JoinPlayer(user *User) {
+	r.players[user.Id()] = user
+}
+
+// TODO: disconnect player
+func (r *Room) DisconnectPlayer(user *User) {
+	delete(r.players, user.Id())
+}
+
+func (r *Room) ModifyScore(uid int64, delta int) {
+	r.scoreTab[uid] += delta
+}
+
+func (r *Room) Owner() *User {
+	return r.owner
+}
+
+func (r Room) Players() map[int64]*User {
+	return r.players
 }

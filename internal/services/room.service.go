@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"errors"
+	"github.com/gofiber/fiber/v2/log"
 	"sigo/internal/lib"
 	"sigo/internal/models"
 	"sort"
@@ -73,4 +75,27 @@ func (r *RoomService) ReadRooms(page int) ([]*models.Room, error) {
 		rooms = append(rooms, r.rooms[id])
 	}
 	return rooms, nil
+}
+
+func Listening(r *models.Room, closingCtx context.Context) {
+	log.Info("Start listnening room")
+	for {
+		select {
+		case msg := <-r.Owner().Sender():
+			{
+				log.Debugf("got msg from owner: %s", msg)
+				response := lib.Response{
+					UID:  msg.UID,
+					Type: msg.Type,
+					Data: msg.Data,
+				}
+				for _, user := range r.Players() {
+					user.Receiver() <- response
+				}
+			}
+
+		case <-closingCtx.Done():
+			return
+		}
+	}
 }
