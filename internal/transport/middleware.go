@@ -36,11 +36,11 @@ func AuthMiddleware(userService *services.UserService, cfg *config.Config) fiber
 					return
 				}
 				c.Cookie(&fiber.Cookie{
-					Name:     CookieName,
-					Value:    cookie,
-					SameSite: fiber.CookieSameSiteNoneMode,
-					Secure:   true,
-					HTTPOnly: true,
+					Name:  CookieName,
+					Value: cookie,
+					//SameSite: fiber.CookieSameSiteNoneMode,
+					//Secure:   true,
+					//HTTPOnly: true,
 				})
 			}
 			c.Locals(UserIDKey, user)
