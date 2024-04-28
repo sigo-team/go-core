@@ -34,7 +34,7 @@ func Handler(ctx context.Context, rc *RoomController) fiber.Handler {
 
 		if user.Id() == room.Owner().Id() {
 			log.Infof("Owner %d joined room %d", user.Id(), roomId)
-			go services.Listening(room, ctx)
+			go services.Listening(room)
 		} else {
 			room.JoinPlayer(user)
 			log.Infof("New player %d joined room %d", user.Id(), roomId)

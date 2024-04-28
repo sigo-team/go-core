@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"errors"
 	"github.com/gofiber/fiber/v2/log"
 	"sigo/internal/lib"
@@ -21,19 +20,20 @@ const (
 	givingAnswerStage          = "givingAnswer"
 	showingAnswerStage         = "showingAnswer"
 
-	infoType         = "info"
-	errorType        = "error"
-	startType        = "start"
-	timeOutType      = "sendTimeOut"
-	nextType         = "next"
-	pastType         = "past"
-	acceptAnswerType = "acceptAnswer"
-	denyAnswerType   = "cancelAnswer"
-	setStageType     = "setStage"
-	modifyScoreType  = "modifyScore"
-	pressButtonType  = "pressButton"
-	setChooserType   = "setChooser"
-	slideType        = "slide"
+	infoType           = "info"
+	errorType          = "error"
+	startType          = "start"
+	timeOutType        = "sendTimeOut"
+	nextType           = "next"
+	pastType           = "past"
+	acceptAnswerType   = "acceptAnswer"
+	denyAnswerType     = "cancelAnswer"
+	setStageType       = "setStage"
+	modifyScoreType    = "modifyScore"
+	pressButtonType    = "pressButton"
+	setChooserType     = "setChooser"
+	slideType          = "slide"
+	questionSelectType = "questionSelect"
 )
 
 type RoomService struct {
@@ -104,8 +104,9 @@ func (r *RoomService) ReadRooms(page int) ([]*models.Room, error) {
 	return rooms, nil
 }
 
-func Listening(room *models.Room, closingCtx context.Context) {
+func Listening(room *models.Room) {
 	log.Info("Start listening room")
+
 	*room.Statement() = models.Statement{
 		Stage:        waitingForStartStage,
 		RoundIdx:     0,
@@ -157,79 +158,26 @@ func Listening(room *models.Room, closingCtx context.Context) {
 	}
 }
 
-func givingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
+func waitingForStartOwnerChecker(room *models.Room, request *lib.Request) {
 	switch request.Type {
-	case acceptAnswerType:
-		delta := *room.Statement().Question.PriceMin
-		modifyScore(room, request, delta)
-
-		room.Statement().Stage = showingAnswerStage
-	case denyAnswerType:
-		delta := -*room.Statement().Question.PriceMin
-		modifyScore(room, request, delta)
-
-		room.Statement().Stage = showingAnswerStage
-	}
-}
-
-func modifyScore(room *models.Room, request *lib.Request, delta int) {
-	room.ModifyScore(request.UID, delta)
-
-	response := lib.Response{
-		UID:  0,
-		Type: modifyScoreType,
-		Data: lib.Data{
-			ScoreChanges: delta,
-			UID:          request.UID,
-		},
-	}
-
-	for _, user := range room.Players() {
-		*user.Receiver() <- response
-	}
-	*room.Owner().Receiver() <- response
-}
-
-func showingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
-	switch request.Type {
-	case nextType:
-		room.Statement().SlideIdx++
-		if len(room.Statement().Question.AnswerSlides) <= room.Statement().SlideIdx {
-			room.Statement().Stage = questionSelectionStage
-			room.Statement().SlideIdx = 0
-
-			sendStage(room, questionSelectionStage)
-		} else {
-			sendSlide(room, answerSlide)
+	case startType:
+		if len(room.Players()) == 0 {
+			log.Errorf("Room %v has no players, cannot start", room.Id())
+			*room.Owner().Receiver() <- lib.Response{
+				UID:  0,
+				Type: errorType,
+				Data: lib.Data{
+					Content: "Room has no players",
+				},
+			}
+			return
 		}
-	}
-}
-
-func buttonChecker(room *models.Room, request *lib.Request) {
-	switch request.Type {
-	case pressButtonType:
-		log.Infof("In room %d user %d pressed the button", room.Id(), request.UID)
-		room.Statement().Stage = givingAnswerStage
-		room.Statement().AnswerableID = request.UID
-
-		sendStage(room, givingAnswerStage)
-
-	}
-}
-
-func showingQuestionOwnerChecker(room *models.Room, request *lib.Request) {
-	switch request.Type {
-	case nextType:
-		room.Statement().SlideIdx++
-		if len(room.Statement().Question.QuestionSlides) <= room.Statement().SlideIdx {
-			room.Statement().Stage = waitingForPressButtonStage
-
-			sendStage(room, waitingForPressButtonStage)
-
-			room.Statement().SlideIdx = 0
-		} else {
-			sendSlide(room, questionSlide)
+		for _, user := range room.Players() {
+			user.SetSender(room.ChooserBC())
+			setChooser(room, user)
+			break
 		}
+		room.Statement().Stage = questionSelectionStage
 	}
 }
 
@@ -242,16 +190,15 @@ func questionSelectionChooserChecker(room *models.Room, request *lib.Request) {
 
 		response := lib.Response{
 			UID:  0,
-			Type: request.Type,
+			Type: questionSelectType,
 			Data: lib.Data{
 				ThemeIndex:    themeIdx,
 				QuestionIndex: questionIdx,
 			},
 		}
-		for _, user := range room.Players() {
-			*user.Receiver() <- response
-		}
-		*room.Owner().Receiver() <- response
+
+		sendForAll(room, response)
+
 		log.Infof("Room %v has choose: %d %d", room.Id(), themeIdx, questionIdx)
 		for _, user := range room.Players() {
 			user.SetSender(room.ButtonBC())
@@ -266,35 +213,80 @@ func questionSelectionChooserChecker(room *models.Room, request *lib.Request) {
 			},
 		}
 
-		sendSlide(room, questionSlide)
+		slide := *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx]
+		sendSlide(room, slide)
 	}
 }
 
-func waitingForStartOwnerChecker(room *models.Room, request *lib.Request) {
+func showingQuestionOwnerChecker(room *models.Room, request *lib.Request) {
 	switch request.Type {
-	case startType:
-		if len(room.Players()) == 0 {
-			log.Errorf("Room %v has no players", room.Id())
-			*room.Owner().Receiver() <- lib.Response{
-				UID:  0,
-				Type: errorType,
-				Data: lib.Data{
-					Content: "Room has no players",
-				},
-			}
+	case nextType:
+		room.Statement().SlideIdx++
+		if len(room.Statement().Question.QuestionSlides) <= room.Statement().SlideIdx {
+			room.Statement().Stage = waitingForPressButtonStage
+			sendStage(room, waitingForPressButtonStage)
+			room.Statement().SlideIdx = 0
 			return
 		}
-		for _, user := range room.Players() {
-			setChooser(room, user)
-			break
+
+		slide := *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx]
+		sendSlide(room, slide)
+	}
+}
+
+func buttonChecker(room *models.Room, request *lib.Request) {
+	switch request.Type {
+	case pressButtonType:
+		log.Infof("In room %d user %d pressed the button", room.Id(), request.UID)
+		room.Statement().Stage = givingAnswerStage
+		room.Statement().AnswerableID = request.UID
+
+		sendStage(room, givingAnswerStage)
+	}
+}
+
+func showingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
+	switch request.Type {
+	case nextType:
+		room.Statement().SlideIdx++
+		if room.Statement().SlideIdx >= len(room.Statement().Question.AnswerSlides) {
+			room.Statement().SlideIdx = 0
+
+			room.Statement().Stage = questionSelectionStage
+			sendStage(room, questionSelectionStage)
+			return
 		}
-		room.Statement().Stage = questionSelectionStage
+
+		slide := *room.Statement().Question.AnswerSlides[room.Statement().SlideIdx]
+		sendSlide(room, slide)
+	}
+}
+
+func givingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
+	var delta int
+	switch request.Type {
+	case acceptAnswerType:
+		delta = *room.Statement().Question.PriceMin
+	case denyAnswerType:
+		delta = -*room.Statement().Question.PriceMin
+	}
+	if request.Type == acceptAnswerType || request.Type == denyAnswerType {
+		room.ModifyScore(request.UID, delta)
+		response := lib.Response{
+			UID:  0,
+			Type: modifyScoreType,
+			Data: lib.Data{
+				ScoreChanges: delta,
+				UID:          request.UID,
+			},
+		}
+		sendForAll(room, response)
+
+		room.Statement().Stage = showingAnswerStage
 	}
 }
 
 func setChooser(room *models.Room, user *models.User) {
-	user.SetSender(room.ChooserBC())
-
 	response := lib.Response{
 		UID:  0,
 		Type: setChooserType,
@@ -310,19 +302,9 @@ func setChooser(room *models.Room, user *models.User) {
 	log.Infof("Set Chooser %v %v", room.Id(), user.Id())
 }
 
-func sendSlide(room *models.Room, t int) {
-	var (
-		content     string
-		contentType string
-	)
-	switch t {
-	case answerSlide:
-		content = *room.Statement().Question.AnswerSlides[room.Statement().SlideIdx].Content
-		contentType = *room.Statement().Question.AnswerSlides[room.Statement().SlideIdx].ContentType
-	case questionSlide:
-		content = *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx].Content
-		contentType = *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx].ContentType
-	}
+func sendSlide(room *models.Room, slide lib.Slide) {
+	content := *slide.Content
+	contentType := *slide.ContentType
 
 	response := lib.Response{
 		UID:  0,
@@ -332,9 +314,7 @@ func sendSlide(room *models.Room, t int) {
 			ContentType: contentType,
 		},
 	}
-	for _, user := range room.Players() {
-		*user.Receiver() <- response
-	}
+	sendForAll(room, response)
 }
 
 func sendTimeOut(room *models.Room, content string) {
@@ -345,10 +325,7 @@ func sendTimeOut(room *models.Room, content string) {
 			Content: content,
 		},
 	}
-	for _, user := range room.Players() {
-		*user.Receiver() <- response
-	}
-	*room.Owner().Receiver() <- response
+	sendForAll(room, response)
 
 	room.Statement().Stage = showingAnswerStage
 }
@@ -362,10 +339,13 @@ func sendStage(room *models.Room, stage string) {
 		},
 	}
 
+	sendForAll(room, response)
+	log.Infof("Room %d set stage %s", room.Id(), stage)
+}
+
+func sendForAll(room *models.Room, response lib.Response) {
 	for _, user := range room.Players() {
 		*user.Receiver() <- response
 	}
 	*room.Owner().Receiver() <- response
-
-	log.Infof("Room %d set stage %s", room.Id(), stage)
 }

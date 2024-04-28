@@ -63,7 +63,6 @@ func NewUserController(options UserControllerOptions) *UserController {
 	}
 }
 
-const RoomIdKey = "room-id-key"
 const UserIDKey = "user-id-key"
 
 func (r *RoomController) CreateRoom(ctx *fiber.Ctx) error {
