@@ -13,12 +13,12 @@ const (
 	answerSlide   = 0
 	questionSlide = 1
 
-	waitingForStartStage       = "waitingForStart"
-	questionSelectionStage     = "questionSelection"
-	showingQuestionStage       = "showingQuestion"
-	waitingForPressButtonStage = "waitingForPressButton"
-	givingAnswerStage          = "givingAnswer"
-	showingAnswerStage         = "showingAnswer"
+	waitForStartStage       = "waitForStart"
+	questionSelectionStage  = "questionSelection"
+	showingQuestionStage    = "showingQuestion"
+	waitForPressButtonStage = "waitForPressButton"
+	givingAnswerStage       = "givingAnswer"
+	showingAnswerStage      = "showingAnswer"
 
 	infoType           = "info"
 	errorType          = "error"
@@ -108,7 +108,7 @@ func Listening(room *models.Room) {
 	log.Info("Start listening room")
 
 	*room.Statement() = models.Statement{
-		Stage:        waitingForStartStage,
+		Stage:        waitForStartStage,
 		RoundIdx:     0,
 		Question:     nil,
 		SlideIdx:     0,
@@ -120,10 +120,10 @@ func Listening(room *models.Room) {
 
 	for {
 		switch room.Statement().Stage {
-		case waitingForStartStage:
+		case waitForStartStage:
 			select {
 			case request := <-*room.Owner().Sender():
-				waitingForStartOwnerChecker(room, &request)
+				waitForStartOwnerChecker(room, &request)
 			}
 		case questionSelectionStage:
 			select {
@@ -135,7 +135,7 @@ func Listening(room *models.Room) {
 			case request := <-*room.Owner().Sender():
 				showingQuestionOwnerChecker(room, &request)
 			}
-		case waitingForPressButtonStage:
+		case waitForPressButtonStage:
 			select {
 			case request := <-*room.ButtonBC():
 				buttonChecker(room, &request)
@@ -158,7 +158,7 @@ func Listening(room *models.Room) {
 	}
 }
 
-func waitingForStartOwnerChecker(room *models.Room, request *lib.Request) {
+func waitForStartOwnerChecker(room *models.Room, request *lib.Request) {
 	switch request.Type {
 	case startType:
 		if len(room.Players()) == 0 {
@@ -223,8 +223,8 @@ func showingQuestionOwnerChecker(room *models.Room, request *lib.Request) {
 	case nextType:
 		room.Statement().SlideIdx++
 		if len(room.Statement().Question.QuestionSlides) <= room.Statement().SlideIdx {
-			room.Statement().Stage = waitingForPressButtonStage
-			sendStage(room, waitingForPressButtonStage)
+			room.Statement().Stage = waitForPressButtonStage
+			sendStage(room, waitForPressButtonStage)
 			room.Statement().SlideIdx = 0
 			return
 		}
