@@ -32,19 +32,19 @@ type (
 		Name   *string
 		Themes []*Theme
 	}
-	Package struct {
+	Pack struct {
 		Name   string
 		Rounds []*Round
 	}
 )
 
 func Unzip(path string) error {
-	err := os.MkdirAll("./unzipSiPackage/media/", os.ModePerm)
+	err := os.MkdirAll("./"+path+"/media/", os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	reader, err := zip.OpenReader(path)
+	reader, err := zip.OpenReader("./tmp_" + path)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func Unzip(path string) error {
 
 	for _, file := range reader.File {
 		if !file.FileInfo().IsDir() {
-			openedFile, err := os.OpenFile("./unzipSiPackage/"+file.Name, os.O_CREATE, os.ModePerm)
+			openedFile, err := os.OpenFile("./"+path+"/"+file.Name, os.O_CREATE, os.ModePerm)
 			if err != nil {
 				return err
 			}
@@ -88,15 +88,15 @@ func Unzip(path string) error {
 	return nil
 }
 
-func RemovePackage() error {
-	if err := os.RemoveAll("./unzipSiPackage"); err != nil {
+func RemovePackage(path string) error {
+	if err := os.RemoveAll("./" + path); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GenerateRandomPackage() Package {
-	var pck Package
+func GenerateRandomPackage() Pack {
+	var pck Pack
 	ipsum := loremipsum.New()
 
 	pck.Name = ipsum.Word()

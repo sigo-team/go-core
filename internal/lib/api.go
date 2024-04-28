@@ -29,11 +29,12 @@ type Response struct {
 }
 
 type Data struct {
-	QuestionType  string `json:"questionType,omitempty"`
-	Content       string `json:"content,omitempty"`
-	Status        string `json:"status,omitempty"`
-	ThemeIndex    uint   `json:"themeIndex"`
-	QuestionIndex uint   `json:"questionIndex"`
-	ScoreChanges  int    `json:"scoreChanges,omitempty"`
-	ChooserID     string `json:"chooserId,omitempty"`
+	Question      Question `json:"question,omitempty"`
+	ContentType   string   `json:"contentType,omitempty"`
+	Content       string   `json:"content,omitempty"`
+	Status        string   `json:"status,omitempty"`
+	ThemeIndex    uint     `json:"themeIndex"`
+	QuestionIndex uint     `json:"questionIndex"`
+	ScoreChanges  int      `json:"scoreChanges,omitempty"`
+	UID           int64    `json:"uid,omitempty"`
 }

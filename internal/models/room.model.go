@@ -3,13 +3,16 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"github.com/gofiber/fiber/v2/log"
+	"os"
+	"sigo/internal/lib"
 )
 
 type RoomConfig struct {
 	Public                                bool `form:"public"`
 	RoundTime                             uint `form:"round_time"`
 	TimeToThinkAfterPressingTheButton     uint `form:"time_to_think_after_pressing_the_button"`
-	QuestionTime                          uint `form:"question_time"`
+	QuestionTime                          int  `form:"question_time"`
 	TimeToThinkOnASpecialQuestion         uint `form:"time_to_think_on_a_special_question"`
 	TimeToThinkAtTheFinal                 uint `form:"time_to_think_at_the_final"`
 	EndTheQuestionIfTheAnswerIsCorrect    bool `form:"end_the_question_if_the_answer_is_correct"`
@@ -28,6 +31,15 @@ type RoomOptions struct {
 	Config      RoomConfig
 }
 
+// TODO: used quesions
+type Statement struct {
+	Stage        string        `json:"stage"`
+	RoundIdx     int           `json:"round_idx"`
+	Question     *lib.Question `json:"question"`
+	SlideIdx     int           `json:"slide_idx"`
+	AnswerableID int64         `json:"answerable"`
+}
+
 type Room struct {
 	owner      *User
 	players    map[int64]*User
@@ -35,8 +47,12 @@ type Room struct {
 
 	id          int64
 	packageName string
+	pack        lib.Pack
 
-	scoreTab map[int64]int
+	scoreTab  map[int64]int
+	statement Statement
+	buttonBC  chan lib.Request
+	chooserBC chan lib.Request
 
 	config RoomConfig
 }
@@ -103,14 +119,27 @@ func NewRoom(options RoomOptions) (*Room, error) {
 	if err != nil {
 		return nil, err
 	}
+	content, err := os.ReadFile("./" + options.PackageName + "/content.json")
+	if err != nil {
+		return nil, err
+	}
+	pck := new(lib.Pack)
+	err = json.Unmarshal(content, pck)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Room{
-		owner:      options.Owner,
-		players:    make(map[int64]*User, 0),
-		spectators: make(map[int64]*User, 0),
-
+		// FIXME: magic number
+		owner:       options.Owner,
+		players:     make(map[int64]*User, 0),
+		spectators:  make(map[int64]*User, 0),
 		packageName: options.PackageName,
-
-		config: options.Config,
+		pack:        *pck,
+		scoreTab:    make(map[int64]int, 0),
+		buttonBC:    make(chan lib.Request, 100),
+		chooserBC:   make(chan lib.Request, 100),
+		config:      options.Config,
 	}, nil
 }
 
@@ -120,6 +149,7 @@ func (r *Room) JoinPlayer(user *User) {
 
 // TODO: disconnect player
 func (r *Room) DisconnectPlayer(user *User) {
+	log.Infof("Player %d disconnecting from %s", user.Id(), r.id)
 	delete(r.players, user.Id())
 }
 
@@ -133,4 +163,28 @@ func (r *Room) Owner() *User {
 
 func (r Room) Players() map[int64]*User {
 	return r.players
+}
+
+func (r *Room) ButtonBC() *chan lib.Request {
+	return &r.buttonBC
+}
+
+func (r *Room) ChooserBC() *chan lib.Request {
+	return &r.chooserBC
+}
+
+func (r *Room) Statement() *Statement {
+	return &r.statement
+}
+
+func (r *Room) PackageName() string {
+	return r.packageName
+}
+
+func (r *Room) Pack() lib.Pack {
+	return r.pack
+}
+
+func (r *Room) Config() RoomConfig {
+	return r.config
 }

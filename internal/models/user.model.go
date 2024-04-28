@@ -7,8 +7,8 @@ import (
 type User struct {
 	id       int64
 	name     string
-	sender   chan lib.Request
-	receiver chan lib.Response
+	sender   *chan lib.Request
+	receiver *chan lib.Response
 }
 
 func (user *User) Name() string {
@@ -34,17 +34,23 @@ func (user *User) Mount(id int64, name string) {
 }
 
 func NewUser() (*User, error) {
+	sender := make(chan lib.Request, 100)
+	receiver := make(chan lib.Response, 100)
 	return &User{
 		// FIXME: (100)
-		sender:   make(chan lib.Request, 100),
-		receiver: make(chan lib.Response, 100),
+		sender:   &sender,
+		receiver: &receiver,
 	}, nil
 }
 
-func (user *User) Sender() chan lib.Request {
+func (user *User) Sender() *chan lib.Request {
 	return user.sender
 }
 
-func (user *User) Receiver() chan lib.Response {
+func (user *User) SetSender(ch *chan lib.Request) {
+	user.sender = ch
+}
+
+func (user *User) Receiver() *chan lib.Response {
 	return user.receiver
 }

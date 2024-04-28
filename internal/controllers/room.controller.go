@@ -6,6 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/utils"
+	"os"
+	"sigo/internal/lib"
 	"sigo/internal/models"
 	"sigo/internal/services"
 	"strconv"
@@ -71,15 +73,24 @@ func (r *RoomController) CreateRoom(ctx *fiber.Ctx) error {
 		fmt.Println(err.Error())
 		return err
 	}
-	file, err := ctx.FormFile("file")
+	formFile, err := ctx.FormFile("file")
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	packageName := utils.UUIDv4()
-	err = ctx.SaveFile(file, fmt.Sprintf("./%s", packageName))
+	err = ctx.SaveFile(formFile, "./tmp_"+packageName)
 	if err != nil {
 		log.Error(err)
+		return err
+	}
+	err = lib.Unzip(packageName)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = os.Remove("./tmp_" + packageName)
+	if err != nil {
 		return err
 	}
 
