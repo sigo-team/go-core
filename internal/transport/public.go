@@ -7,6 +7,10 @@ import (
 )
 
 func PublicRoutes(closingCtx context.Context, app *fiber.App, roomController *controllers.RoomController) {
+	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
+		return c.SendFile("./favicon.ico")
+	})
+
 	route := app.Group("/api/v1")
 
 	route.Get("/room", roomController.GetRooms)
@@ -15,4 +19,12 @@ func PublicRoutes(closingCtx context.Context, app *fiber.App, roomController *co
 	route.Use("/ws", UpgradeMiddleware)
 
 	route.Get("/ws", controllers.Handler(closingCtx, roomController))
+
+	route.Get("/media/:packageName/:fileName", sendMedia)
+}
+
+func sendMedia(ctx *fiber.Ctx) error {
+	packageName := ctx.Params("packageName")
+	fileName := ctx.Params("fileName")
+	return ctx.SendFile("./" + packageName + "/media/" + fileName)
 }

@@ -10,9 +10,6 @@ import (
 )
 
 const (
-	answerSlide   = 0
-	questionSlide = 1
-
 	waitForStartStage       = "waitForStart"
 	questionSelectionStage  = "questionSelection"
 	showingQuestionStage    = "showingQuestion"
@@ -27,13 +24,15 @@ const (
 	nextType           = "next"
 	pastType           = "past"
 	acceptAnswerType   = "acceptAnswer"
-	denyAnswerType     = "cancelAnswer"
+	denyAnswerType     = "denyAnswer"
 	setStageType       = "setStage"
 	modifyScoreType    = "modifyScore"
 	pressButtonType    = "pressButton"
 	setChooserType     = "setChooser"
 	slideType          = "slide"
 	questionSelectType = "questionSelect"
+
+	InvalidRequestTypeError = "InvalidRequestTypeError"
 )
 
 type RoomService struct {
@@ -126,10 +125,14 @@ func Listening(room *models.Room) {
 				waitForStartOwnerChecker(room, &request)
 			}
 		case questionSelectionStage:
+			log.Debug("LOLISHE")
 			select {
 			case request := <-*room.ChooserBC():
+				log.Debug("loool")
 				questionSelectionChooserChecker(room, &request)
 			}
+			log.Debug("LOLISHEx2")
+
 		case showingQuestionStage:
 			select {
 			case request := <-*room.Owner().Sender():
@@ -178,12 +181,25 @@ func waitForStartOwnerChecker(room *models.Room, request *lib.Request) {
 			break
 		}
 		room.Statement().Stage = questionSelectionStage
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
+	}
+}
+
+// FIXME
+func sendError(user *models.User, responseType string) {
+	*user.Receiver() <- lib.Response{
+		UID:  0,
+		Type: errorType,
+		Data: lib.Data{
+			ContentType: responseType,
+		},
 	}
 }
 
 func questionSelectionChooserChecker(room *models.Room, request *lib.Request) {
 	switch request.Type {
-	case questionSelectionStage:
+	case questionSelectType:
 		roundIdx := room.Statement().RoundIdx
 		themeIdx := request.Data.ThemeIndex
 		questionIdx := request.Data.QuestionIndex
@@ -203,11 +219,11 @@ func questionSelectionChooserChecker(room *models.Room, request *lib.Request) {
 		for _, user := range room.Players() {
 			user.SetSender(room.ButtonBC())
 		}
-		room.Statement().Stage = showingAnswerStage
+		room.Statement().Stage = showingQuestionStage
 		room.Statement().Question = room.Pack().Rounds[roundIdx].Themes[themeIdx].Questions[questionIdx]
 
 		*room.Owner().Receiver() <- lib.Response{
-			Type: showingAnswerStage,
+			Type: showingQuestionStage,
 			Data: lib.Data{
 				Question: *room.Statement().Question,
 			},
@@ -215,6 +231,8 @@ func questionSelectionChooserChecker(room *models.Room, request *lib.Request) {
 
 		slide := *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx]
 		sendSlide(room, slide)
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
 	}
 }
 
@@ -231,6 +249,8 @@ func showingQuestionOwnerChecker(room *models.Room, request *lib.Request) {
 
 		slide := *room.Statement().Question.QuestionSlides[room.Statement().SlideIdx]
 		sendSlide(room, slide)
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
 	}
 }
 
@@ -242,6 +262,8 @@ func buttonChecker(room *models.Room, request *lib.Request) {
 		room.Statement().AnswerableID = request.UID
 
 		sendStage(room, givingAnswerStage)
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
 	}
 }
 
@@ -259,6 +281,8 @@ func showingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
 
 		slide := *room.Statement().Question.AnswerSlides[room.Statement().SlideIdx]
 		sendSlide(room, slide)
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
 	}
 }
 
@@ -269,6 +293,8 @@ func givingAnswerOwnerChecker(room *models.Room, request *lib.Request) {
 		delta = *room.Statement().Question.PriceMin
 	case denyAnswerType:
 		delta = -*room.Statement().Question.PriceMin
+	default:
+		sendError(room.Owner(), InvalidRequestTypeError)
 	}
 	if request.Type == acceptAnswerType || request.Type == denyAnswerType {
 		room.ModifyScore(request.UID, delta)
