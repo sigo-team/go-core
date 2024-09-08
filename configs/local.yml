@@ -1,5 +1,0 @@
-env: "local"
-host: localhost
-port: 8090
-JWTSecret: GPfYIQUkGexayJilJyz6brI0mthApP3HMUG
-JWTMaxAge: 40m

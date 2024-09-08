@@ -2,10 +2,12 @@ package lib
 
 import (
 	"archive/zip"
+	"encoding/json"
 	"gopkg.in/loremipsum.v1"
 	"io"
 	"math/rand"
 	"os"
+	//	"sigo/internal/models"
 )
 
 type (
@@ -139,4 +141,30 @@ func GenerateRandomPackage() Pack {
 	}
 
 	return pck
+}
+
+func GetPckHeaders(pack Pack) (Pack, error) {
+	marshal, err := json.Marshal(pack)
+	if err != nil {
+		return Pack{}, err
+	}
+
+	siPckHeaders := new(Pack)
+	err = json.Unmarshal(marshal, &siPckHeaders)
+	if err != nil {
+		return Pack{}, err
+	}
+
+	for _, round := range siPckHeaders.Rounds {
+		for _, theme := range round.Themes {
+			for _, question := range theme.Questions {
+				question.Type = nil
+				question.AnswerSlides = nil
+				question.QuestionSlides = nil
+				question.PriceMax = nil
+				question.PriceStep = nil
+			}
+		}
+	}
+	return *siPckHeaders, nil
 }

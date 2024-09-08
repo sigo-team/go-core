@@ -7,10 +7,6 @@ import (
 )
 
 func PublicRoutes(closingCtx context.Context, app *fiber.App, roomController *controllers.RoomController) {
-	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
-		return c.SendFile("./favicon.ico")
-	})
-
 	route := app.Group("/api/v1")
 
 	route.Get("/room", roomController.GetRooms)

@@ -34,10 +34,9 @@ func (user *User) Mount(id int64, name string) {
 }
 
 func NewUser() (*User, error) {
-	sender := make(chan lib.Request, 100)
-	receiver := make(chan lib.Response, 100)
+	sender := make(chan lib.Request)
+	receiver := make(chan lib.Response)
 	return &User{
-		// FIXME: (100)
 		sender:   &sender,
 		receiver: &receiver,
 	}, nil

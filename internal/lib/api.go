@@ -1,10 +1,10 @@
 /* test requests:
 
 {
-    "type": "chooseQuestion",
+    "type": "selectQuestion",
     "data": {
-        "themeIndex": 1,
-        "questionIndex": 0
+        "themeIdx": 1,
+        "questionIdx": 1
     }
 }
 
@@ -29,12 +29,10 @@ type Response struct {
 }
 
 type Data struct {
-	Question      Question `json:"question,omitempty"`
-	ContentType   string   `json:"contentType,omitempty"`
 	Content       string   `json:"content,omitempty"`
-	Status        string   `json:"status,omitempty"`
-	ThemeIndex    uint     `json:"themeIndex"`
-	QuestionIndex uint     `json:"questionIndex"`
-	ScoreChanges  int      `json:"scoreChanges,omitempty"`
-	UID           int64    `json:"uid,omitempty"`
+	ContentType   string   `json:"content_type,omitempty"`
+	UsedQuestions [][]bool `json:"usedQuestions,omitempty"`
+	ThemeIdx      int      `json:"themeIdx"`
+	QuestionIdx   int      `json:"questionIdx"`
+	Time          int64    `json:"time"`
 }

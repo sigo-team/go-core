@@ -77,18 +77,18 @@ func (r *RoomController) CreateRoom(ctx *fiber.Ctx) error {
 		log.Error(err)
 		return err
 	}
-	packageName := utils.UUIDv4()
-	err = ctx.SaveFile(formFile, "./tmp_"+packageName)
+	packName := utils.UUIDv4()
+	err = ctx.SaveFile(formFile, "./tmp_"+packName)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = lib.Unzip(packageName)
+	err = lib.Unzip(packName)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = os.Remove("./tmp_" + packageName)
+	err = os.Remove("./tmp_" + packName)
 	if err != nil {
 		return err
 	}
@@ -98,11 +98,12 @@ func (r *RoomController) CreateRoom(ctx *fiber.Ctx) error {
 	room, err := r.roomService.CreteRoom(models.RoomOptions{
 		Config:      roomConfig,
 		Owner:       user,
-		PackageName: packageName,
+		PackageName: packName,
 	})
 	if err != nil {
 		return err
 	}
+	go services.Listening(room)
 
 	return ctx.JSON(struct {
 		RoomId int64 `json:"room_id"`

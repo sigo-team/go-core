@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"errors"
-	"github.com/gofiber/fiber/v2/log"
 	"os"
 	"sigo/internal/lib"
 )
@@ -31,28 +30,20 @@ type RoomOptions struct {
 	Config      RoomConfig
 }
 
-// TODO: used quesions
-type Statement struct {
-	Stage        string        `json:"stage"`
-	RoundIdx     int           `json:"round_idx"`
-	Question     *lib.Question `json:"question"`
-	SlideIdx     int           `json:"slide_idx"`
-	AnswerableID int64         `json:"answerable"`
-}
-
 type Room struct {
 	owner      *User
 	players    map[int64]*User
 	spectators map[int64]*User
 
-	id          int64
-	packageName string
-	pack        lib.Pack
+	id       int64
+	packName string
+	pack     lib.Pack
 
-	scoreTab  map[int64]int
-	statement Statement
-	buttonBC  chan lib.Request
-	chooserBC chan lib.Request
+	scoreTab       map[int64]int
+	statement      *Statement
+	receiver       chan lib.Request
+	sender         chan lib.Response
+	timeoutChannel chan interface{}
 
 	config RoomConfig
 }
@@ -85,7 +76,7 @@ func (r *Room) MarshalJSON() ([]byte, error) {
 		Players:       players,
 		PlayersAmount: len(r.players),
 		Id:            r.Id(),
-		PackageName:   r.packageName,
+		PackageName:   r.packName,
 		Public:        r.config.Public,
 	})
 }
@@ -131,15 +122,17 @@ func NewRoom(options RoomOptions) (*Room, error) {
 
 	return &Room{
 		// FIXME: magic number
-		owner:       options.Owner,
-		players:     make(map[int64]*User, 0),
-		spectators:  make(map[int64]*User, 0),
-		packageName: options.PackageName,
-		pack:        *pck,
-		scoreTab:    make(map[int64]int, 0),
-		buttonBC:    make(chan lib.Request, 100),
-		chooserBC:   make(chan lib.Request, 100),
-		config:      options.Config,
+		owner:          options.Owner,
+		players:        make(map[int64]*User, 0),
+		spectators:     make(map[int64]*User, 0),
+		packName:       options.PackageName,
+		pack:           *pck,
+		scoreTab:       make(map[int64]int, 0),
+		receiver:       make(chan lib.Request),
+		sender:         make(chan lib.Response),
+		timeoutChannel: make(chan interface{}),
+		config:         options.Config,
+		statement:      new(Statement),
 	}, nil
 }
 
@@ -147,9 +140,7 @@ func (r *Room) JoinPlayer(user *User) {
 	r.players[user.Id()] = user
 }
 
-// TODO: disconnect player
-func (r *Room) DisconnectPlayer(user *User) {
-	log.Infof("Player %d disconnecting from %s", user.Id(), r.id)
+func (r *Room) DisjoinPlayer(user *User) {
 	delete(r.players, user.Id())
 }
 
@@ -165,20 +156,16 @@ func (r Room) Players() map[int64]*User {
 	return r.players
 }
 
-func (r *Room) ButtonBC() *chan lib.Request {
-	return &r.buttonBC
-}
-
-func (r *Room) ChooserBC() *chan lib.Request {
-	return &r.chooserBC
+func (r *Room) Receiver() *chan lib.Request {
+	return &r.receiver
 }
 
 func (r *Room) Statement() *Statement {
-	return &r.statement
+	return r.statement
 }
 
 func (r *Room) PackageName() string {
-	return r.packageName
+	return r.packName
 }
 
 func (r *Room) Pack() lib.Pack {
@@ -187,4 +174,8 @@ func (r *Room) Pack() lib.Pack {
 
 func (r *Room) Config() RoomConfig {
 	return r.config
+}
+
+func (r *Room) TimeoutChannel() *chan interface{} {
+	return &r.timeoutChannel
 }
