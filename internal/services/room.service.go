@@ -20,8 +20,8 @@ const (
 	typeConnected    = "connected"
 	typeDisconnected = "disconnected"
 
-	stageWaitForPlayers    = "waitForStart"
-	stageQuestionSelection = "questionSelection"
+	stageWaitForPlayers    = "wait_for_start"
+	stageQuestionSelection = "question_selection"
 	stageQuestion          = "question"
 	stageButton            = "button"
 	stageResponse          = "response"
@@ -29,17 +29,17 @@ const (
 
 	typeError          = "error"
 	typeStart          = "start"
-	typeTimeOut        = "sendTimeOut"
+	typeTimeOut        = "send_time_out"
 	typeNext           = "next"
-	typeAcceptAnswer   = "acceptAnswer"
-	typeDenyAnswer     = "denyAnswer"
-	typeSetStage       = "setStage"
-	typeModifyScore    = "modifyScore"
-	typePressButton    = "pressButton"
-	typeSetChooser     = "setChooser"
+	typeAcceptAnswer   = "accept_answer"
+	typeDenyAnswer     = "deny_answer"
+	typeSetStage       = "set_stage"
+	typeModifyScore    = "modify_score"
+	typePressButton    = "press_button"
+	typeSetChooser     = "set_chooser"
 	typeSlide          = "slide"
-	typeQuestionSelect = "selectQuestion"
-	typeUsedQuestions  = "usedQuestions"
+	typeQuestionSelect = "select_question"
+	typeUsedQuestions  = "used_questions"
 )
 
 type RoomService struct {

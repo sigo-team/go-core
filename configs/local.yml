@@ -1,0 +1,5 @@
+env: "local"
+host: localhost
+port: 8090
+JWTSecret: GPfYIQUkGexayJilJyz6brI0mthApP3HMUG
+JWTMaxAge: 152424000m

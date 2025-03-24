@@ -31,8 +31,8 @@ type Response struct {
 type Data struct {
 	Content       string   `json:"content,omitempty"`
 	ContentType   string   `json:"content_type,omitempty"`
-	UsedQuestions [][]bool `json:"usedQuestions,omitempty"`
-	ThemeIdx      int      `json:"themeIdx"`
-	QuestionIdx   int      `json:"questionIdx"`
+	UsedQuestions [][]bool `json:"used_questions,omitempty"`
+	ThemeIdx      int      `json:"theme_idx"`
+	QuestionIdx   int      `json:"question_idx"`
 	Time          int64    `json:"time"`
 }

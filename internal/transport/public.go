@@ -12,11 +12,10 @@ func PublicRoutes(closingCtx context.Context, app *fiber.App, roomController *co
 	route.Get("/room", roomController.GetRooms)
 	route.Post("/room", roomController.CreateRoom)
 
-	route.Use("/ws", UpgradeMiddleware)
-
-	route.Get("/ws", controllers.Handler(closingCtx, roomController))
-
 	route.Get("/media/:packageName/:fileName", sendMedia)
+
+	route.Use("/ws", UpgradeMiddleware)
+	route.Get("/ws", controllers.Handler(closingCtx, roomController))
 }
 
 func sendMedia(ctx *fiber.Ctx) error {

@@ -67,17 +67,17 @@ func (r *Room) MarshalJSON() ([]byte, error) {
 			Name string `json:"name"`
 		} `json:"owner"`
 		Players       map[int64]string `json:"players"`
-		PlayersAmount int              `json:"playersAmount"`
+		PlayersAmount int              `json:"players_amount"`
 		Id            int64            `json:"id"`
 		PackageName   string           `json:"package_name"`
-		Public        bool             `json:"public"`
+		IsPublic      bool             `json:"is_public"`
 	}{
 		Owner:         owner,
 		Players:       players,
 		PlayersAmount: len(r.players),
 		Id:            r.Id(),
 		PackageName:   r.packName,
-		Public:        r.config.Public,
+		IsPublic:      r.config.Public,
 	})
 }
 

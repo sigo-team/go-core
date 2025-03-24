@@ -1,0 +1,210 @@
+openapi: 3.1.1
+info:
+  title: go-core rest
+  description: go-core rest
+  version: 0.0.1
+servers:
+  - url: 'http://127.0.0.1:8090/api/v1'
+paths:
+  /room:
+    get:
+      summary: Send the number of pages and rooms on the current
+      tags:
+        - Room
+      responses:
+        '200':
+          description: Getting count of pages and rooms on the current
+          content:
+            application/json:
+              schema:
+                type:
+                  object
+                properties:
+                  pages:
+                    type: integer
+                    example: 1488
+                  rooms:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Room"
+    post:
+      summary: Send ID of created room
+      tags:
+        - Room
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/RoomOptions"
+
+      responses:
+        '200':
+          description: Getting room ID
+          content:
+            application/json:
+              schema:
+                type:
+                  object
+                properties:
+                  room_id:
+                    type: integer
+                    example: 10000
+  /media/{packageName}/{fileName}:
+    get:
+      summary: Getting file from package folder
+      tags:
+        - Media
+      parameters:
+        - in: path
+          name: packageName
+          schema:
+            type: string
+          required: true
+          example: e387b9ef-6261-4275-8c21-35e89fb1e3f8
+        - in: path
+          name: fileName
+          schema:
+            type: string
+          required: true
+          example: photo.jpg
+      responses:
+        '200':
+          content:
+            application/file:
+              schema:
+                type: string
+                format: binary
+          description:
+            Return file
+  /ws:
+    get:
+      summary:
+        Websocket upgrade request
+      tags:
+        - Websocket
+      responses:
+        '426':
+          description: Websocket upgrade response
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Upgrade Required
+
+components:
+  schemas:
+    Room:
+      type: object
+      properties:
+        owner:
+          type: object
+          properties:
+            uid:
+              type: integer
+              example: 10000
+            name:
+              type: string
+              example: damp-dawn
+        players:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            10000: damp-dawn
+            10001: billowing-shape
+        players_amount:
+          type: integer
+          example: 2
+        id:
+          type: integer
+          example: 10000
+        package_name:
+          type: string
+          example: de055efd-34e8-4dd1-9e04-acfd82778aaf
+        is_public:
+          type: boolean
+          example: true
+
+    RoomOptions:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        round_time:
+          type: integer
+          example: 5
+        time_to_think_after_pressing_the_button:
+          type: integer
+          example: 5
+        question_time:
+          type: integer
+          example: 5
+        time_to_think_on_a_special_question:
+          type: integer
+          example: 5
+        time_to_think_at_the_final:
+          type: integer
+          example: 5
+        end_the_question_if_the_answer_is_correct:
+          type: boolean
+          example: true
+        game_with_false_starts:
+          type: boolean
+          example: true
+        multimedia_with_false_starts:
+          type: boolean
+          example: true
+        play_special_questions:
+          type: boolean
+          example: true
+        roll_back_statistics_when_taking_a_step_back:
+          type: boolean
+          example: true
+        automatic_game_play:
+          type: boolean
+          example: true
+        deduct_points_for_an_incorrect_answer:
+          type: boolean
+          example: true
+        show_players_who_have_lost_the_button:
+          type: boolean
+          example: true
+
+    WsData:
+        type: object
+        properties:
+          content:
+            type: string
+            example: Lorem ipsum
+          content_type:
+            type: string
+            example: text
+          used_questions:
+            type: array
+            items:
+              type: array
+              items:
+                type: boolean
+                example: false
+          theme_idx:
+            type: integer
+            example: 0
+          question_idx:
+            example: 1
+            type: integer
+          time:
+            type: integer
+            example: 1742828355
+    WsMessage:
+      type: object
+      properties:
+        uid:
+          type: integer
+          example: 10000
+        type:
+          type: string
+          example: error
+        data:
+          $ref: "#/components/schemas/WsData"
